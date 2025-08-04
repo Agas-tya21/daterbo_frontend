@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent, ChangeEvent } from 'react';
+import { useEffect, useState, FormEvent, ChangeEvent, useMemo } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { DataPeminjam, User, Status, Leasing } from '@/app/types';
 import { useAuth } from '../context/AuthContext';
@@ -40,6 +40,12 @@ function CustomerManagementContent() {
   const [leasings, setLeasings] = useState<Leasing[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  // State untuk filter
+  const [activeStatus, setActiveStatus] = useState<string>('Semua');
+  const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
+  const [selectedUser, setSelectedUser] = useState<string>('Semua');
+
+
   useEffect(() => {
     if (!token) return;
 
@@ -72,7 +78,6 @@ function CustomerManagementContent() {
           setStatuses(statusData);
           setLeasings(leasingData);
 
-          // Cari dan atur pengguna yang sedang login
           const loggedInUser = userData.find(user => user.email === userEmail);
           setCurrentUser(loggedInUser || null);
 
@@ -91,9 +96,27 @@ function CustomerManagementContent() {
     }
   }, [token]);
 
+  // Logika untuk memfilter data
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      const statusMatch = activeStatus === 'Semua' || item.status?.namastatus === activeStatus;
+      const leasingMatch = selectedLeasing === 'Semua' || item.leasing?.idleasing === selectedLeasing;
+      const userMatch = selectedUser === 'Semua' || item.user?.iduser === selectedUser;
+      return statusMatch && leasingMatch && userMatch;
+    });
+  }, [data, activeStatus, selectedLeasing, selectedUser]);
+  
+  const statusCounts = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    statuses.forEach(status => {
+        counts[status.namastatus] = data.filter(item => item.status?.namastatus === status.namastatus).length;
+    });
+    return counts;
+  }, [data, statuses]);
+
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // Untuk relasi, kita buat objeknya
     if (name === "status" || name === "leasing") {
         const idKey = name === "status" ? "idstatus" : "idleasing";
         const nameKey = name === "status" ? "namastatus" : "namaleasing";
@@ -118,7 +141,6 @@ function CustomerManagementContent() {
     };
 
     const formData = new FormData();
-    // Tambahkan user yang sedang login ke data
     const finalData = { ...newPeminjamData, user: { iduser: currentUser.iduser, namauser: currentUser.namauser, email: currentUser.email } };
     formData.append('data', JSON.stringify(finalData));
 
@@ -131,9 +153,7 @@ function CustomerManagementContent() {
     try {
       const response = await fetch(`${API_BASE_URL}/datapeminjam`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
 
@@ -163,7 +183,6 @@ function CustomerManagementContent() {
 
   return (
     <div className="container mx-auto p-4">
-      {/* Card untuk area yang diminta */}
       <div className="bg-white dark:bg-gray-800 rounded-[20px] shadow-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Customer Management</h1>
@@ -179,7 +198,6 @@ function CustomerManagementContent() {
             <h2 className="text-xl font-bold mb-4">Tambah Data Peminjam Baru</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Kolom Input Teks dan Tanggal */}
                 <input name="nik" placeholder="NIK" onChange={handleInputChange} className="p-2 border rounded" />
                 <input name="namapeminjam" placeholder="Nama Peminjam" onChange={handleInputChange} className="p-2 border rounded" />
                 <input name="nohp" placeholder="No. HP" onChange={handleInputChange} className="p-2 border rounded" />
@@ -188,31 +206,12 @@ function CustomerManagementContent() {
                 <input name="alamat" placeholder="Alamat" onChange={handleInputChange} className="p-2 border rounded" />
                 <input name="kota" placeholder="Kota" onChange={handleInputChange} className="p-2 border rounded" />
                 <input name="kecamatan" placeholder="Kecamatan" onChange={handleInputChange} className="p-2 border rounded" />
-                <div>
-                    <label className="text-sm">Tgl Input</label>
-                    <input type="date" name="tglinput" onChange={handleInputChange} className="p-2 border rounded w-full" />
-                </div>
-                <div>
-                    <label className="text-sm">Tgl Penerimaan</label>
-                    <input type="date" name="tglpenerimaan" onChange={handleInputChange} className="p-2 border rounded w-full" />
-                </div>
-                <div>
-                    <label className="text-sm">Tgl Pencairan</label>
-                    <input type="date" name="tglpencairan" onChange={handleInputChange} className="p-2 border rounded w-full" />
-                </div>
+                <div><label className="text-sm">Tgl Input</label><input type="date" name="tglinput" onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
+                <div><label className="text-sm">Tgl Penerimaan</label><input type="date" name="tglpenerimaan" onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
+                <div><label className="text-sm">Tgl Pencairan</label><input type="date" name="tglpencairan" onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
                 <textarea name="keterangan" placeholder="Keterangan" onChange={handleInputChange} className="p-2 border rounded md:col-span-2 lg:col-span-3" />
-                
-                {/* Pilihan Select */}
-                <select name="status" onChange={handleInputChange} className="p-2 border rounded">
-                  <option value="">Pilih Status</option>
-                  {statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}
-                </select>
-                <select name="leasing" onChange={handleInputChange} className="p-2 border rounded">
-                  <option value="">Pilih Leasing</option>
-                  {leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}
-                </select>
-
-                {/* Kolom Input File */}
+                <select name="status" onChange={handleInputChange} className="p-2 border rounded"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select>
+                <select name="leasing" onChange={handleInputChange} className="p-2 border rounded"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select>
                 <div><label>Foto KTP</label><input type="file" name="fotoktp" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Foto BPKB</label><input type="file" name="fotobpkb" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Foto STNK</label><input type="file" name="fotostnk" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
@@ -222,20 +221,45 @@ function CustomerManagementContent() {
                 <div><label>Buku Nikah</label><input type="file" name="fotobukunikah" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Sertifikat</label><input type="file" name="fotosertifikat" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
               </div>
-              <div className="mt-6 flex justify-end space-x-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
-                  Batal
-                </button>
-                <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
-                  Simpan
-                </button>
-              </div>
+              <div className="mt-6 flex justify-end space-x-2"><button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Batal</button><button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Simpan</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Card Wrapper untuk Tabel */}
+      {/* Area Filter */}
+      <div className='mb-4'>
+        <div className="flex items-center bg-red-600 rounded-full p-1 space-x-2">
+          <button onClick={() => setActiveStatus('Semua')} className={`relative px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === 'Semua' ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
+            Semua
+            <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">{data.length}</span>
+          </button>
+          {statuses.map(status => (
+            <button key={status.idstatus} onClick={() => setActiveStatus(status.namastatus)} className={`relative px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === status.namastatus ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
+              {status.namastatus}
+              <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {statusCounts[status.namastatus] || 0}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className='mt-4 flex space-x-4'>
+            <select onChange={(e) => setSelectedLeasing(e.target.value)} className="bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                <option value="Semua">Semua Leasing</option>
+                {leasings.map(leasing => (
+                    <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
+                ))}
+            </select>
+            <select onChange={(e) => setSelectedUser(e.target.value)} className="bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                <option value="Semua">Semua User</option>
+                {users.map(user => (
+                    <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
+                ))}
+            </select>
+        </div>
+      </div>
+      
       <div className="bg-white dark:bg-gray-800 rounded-[20px] shadow-md p-4 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -256,8 +280,8 @@ function CustomerManagementContent() {
               </tr>
             </thead>
             <tbody>
-              {data.length > 0 ? (
-                data.map((item, index) => (
+              {filteredData.length > 0 ? (
+                filteredData.map((item, index) => (
                   <tr key={item.nik || index} className="hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-700">
                     <td className="py-2 px-4">{item.nik}</td>
                     <td className="py-2 px-4">{item.namapeminjam}</td>
