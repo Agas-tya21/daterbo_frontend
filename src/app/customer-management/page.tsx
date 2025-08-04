@@ -301,7 +301,7 @@ function CustomerManagementContent() {
 
       {/* Area Filter */}
       <div className='mb-4'>
-        <div className="bg-red-600 rounded-full p-1">
+        <div className="bg-red-600 rounded-full p-1 pt-3">
             <div className="flex items-center space-x-2 overflow-x-auto whitespace-nowrap p-1">
                 <button onClick={() => setActiveStatus('Semua')} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === 'Semua' ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
                     Semua
@@ -339,6 +339,7 @@ function CustomerManagementContent() {
           <table className="min-w-full">
             <thead className="bg-[#fe0000] text-white">
               <tr>
+                <th className="py-3 px-4 text-left">No.</th>
                 <th className="py-3 px-4 text-left">NIK</th>
                 <th className="py-3 px-4 text-left">Nama Peminjam</th>
                 <th className="py-3 px-4 text-left">User</th>
@@ -354,8 +355,9 @@ function CustomerManagementContent() {
             </thead>
             <tbody>
               {filteredData.length > 0 ? (
-                filteredData.map((item) => (
+                filteredData.map((item, index) => (
                   <tr key={item.iddatapeminjam} className="hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-700">
+                    <td className="py-2 px-4">{index + 1}</td>
                     <td className="py-2 px-4">{item.nik}</td>
                     <td className="py-2 px-4">{item.namapeminjam}</td>
                     <td className="py-2 px-4">{item.user?.namauser}</td>
@@ -405,7 +407,7 @@ function CustomerManagementContent() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={11} className="py-4 px-4 text-center">Tidak ada data untuk ditampilkan.</td>
+                  <td colSpan={12} className="py-4 px-4 text-center">Tidak ada data untuk ditampilkan.</td>
                 </tr>
               )}
             </tbody>
