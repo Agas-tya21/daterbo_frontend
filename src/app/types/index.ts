@@ -1,7 +1,14 @@
+// agas-tya21/daterbo_frontend/daterbo_frontend-1d9a0105a6fa822db5e581083d639b017c6d96c8/src/app/types/index.ts
 export interface User {
     iduser: string;
     namauser: string;
     email: string;
+}
+
+export interface Admin {
+    email: string;
+    namaadmin: string;
+    password?: string;
 }
 
 export interface Status {
@@ -15,6 +22,7 @@ export interface Leasing {
 }
 
 export interface DataPeminjam {
+    iddatapeminjam: string;
     nik: string;
     user: User;
     status: Status;

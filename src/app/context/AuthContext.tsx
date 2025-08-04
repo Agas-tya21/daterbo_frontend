@@ -30,8 +30,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Coba login sebagai admin terlebih dahulu
     try {
-      const response = await fetch(`${API_BASE_URL}/users/login`, {
+      const adminResponse = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,17 +40,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login gagal');
+      if (adminResponse.ok) {
+        // Jika login admin berhasil, kita tidak mendapatkan token, hanya pesan sukses
+        // Untuk konsistensi, kita bisa membuat token dummy atau menganggapnya berhasil
+        // Di sini kita asumsikan login admin tidak memerlukan token untuk frontend
+        // atau Anda bisa memodifikasi backend untuk memberikan token admin jika perlu.
+        
+        // Untuk tujuan navigasi, kita bisa set token dummy atau state khusus admin
+        const tempAdminToken = 'admin-logged-in';
+        setToken(tempAdminToken);
+        localStorage.setItem('authToken', tempAdminToken);
+        router.push('/admin-management');
+        return;
+      }
+    } catch (error) {
+      console.error('Admin login check failed, proceeding to user login.', error);
+    }
+
+    // Jika login admin gagal, coba login sebagai user
+    try {
+      const userResponse = await fetch(`${API_BASE_URL}/users/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json();
+        throw new Error(errorData.message || 'Login sebagai user gagal');
       }
 
-      const data = await response.json();
+      const data = await userResponse.json();
       const newToken = data.token;
 
       setToken(newToken);
       localStorage.setItem('authToken', newToken);
-      router.push('/customer-management'); // Arahkan ke halaman yang dilindungi setelah login
+      router.push('/customer-management');
     } catch (error) {
       console.error('Login error:', error);
       throw error; // Lempar kembali error untuk ditangani di halaman login
