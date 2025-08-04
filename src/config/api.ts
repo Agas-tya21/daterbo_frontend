@@ -1,9 +1,7 @@
-// Langsung definisikan base URL di sini
-const API_BASE_URL = "http://localhost:8070/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Cek jika URL tidak sengaja kosong
 if (!API_BASE_URL) {
-  throw new Error("API_BASE_URL is not defined in config/api.ts");
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is not defined in .env.local");
 }
 
 export { API_BASE_URL };

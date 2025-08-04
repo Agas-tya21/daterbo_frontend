@@ -2,32 +2,47 @@
 
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/config/api';
-import { DataPeminjam } from '@/types';
+import { DataPeminjam } from '@/app/types';
+import { useAuth } from '../context/AuthContext';
+import PrivateRoute from '../components/PrivateRoute';
 
-export default function CustomerManagementPage() {
+function CustomerManagementContent() {
   const [data, setData] = useState<DataPeminjam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return; // Jangan fetch data jika tidak ada token
+
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/datapeminjam`);
+        const response = await fetch(`${API_BASE_URL}/datapeminjam`, {
+          headers: {
+            'Authorization': `Bearer ${token}`, // Tambahkan token ke header
+          },
+        });
+
         if (!response.ok) {
-          throw new Error('Gagal mengambil data');
+          throw new Error('Gagal mengambil data atau sesi Anda telah berakhir.');
         }
+
         const result: DataPeminjam[] = await response.json();
         setData(result);
-
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+            setError(err.message);
+        } else {
+            setError('An unknown error occurred');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [token]);
 
   if (loading) {
     return <div className="container mx-auto p-4">Memuat data...</div>;
@@ -84,4 +99,14 @@ export default function CustomerManagementPage() {
       </div>
     </div>
   );
+}
+
+
+// Bungkus komponen utama dengan PrivateRoute
+export default function CustomerManagementPage() {
+    return (
+        <PrivateRoute>
+            <CustomerManagementContent />
+        </PrivateRoute>
+    )
 }
