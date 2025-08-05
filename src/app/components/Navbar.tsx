@@ -1,12 +1,17 @@
+// agas-tya21/daterbo_frontend/daterbo_frontend-35019fc170489cc0f5acf961f858bbc07ede527b/src/app/components/Navbar.tsx
+
 'use client';
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const { token, logout } = useAuth(); // Dapatkan token dan fungsi logout
+  const { token, user, logout } = useAuth();
+
+  // Cek apakah pengguna adalah admin (R001)
+  const isAdmin = user?.role === 'R001';
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
@@ -47,22 +52,41 @@ const Navbar = () => {
             >
               Home
             </Link>
-            {token && ( // Tampilkan hanya jika sudah login
-              <Link
-                href="/customer-management"
-                className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Customer Management
-              </Link>
+            {token && (
+              <>
+                <Link
+                  href="/customer-management"
+                  className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Customer Management
+                </Link>
+                {/* Tampilkan menu ini hanya jika isAdmin bernilai true */}
+                {isAdmin && (
+                  <>
+                    <Link
+                      href="/user-management"
+                      className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      User Management
+                    </Link>
+                    <Link
+                      href="/role-management"
+                      className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Role Management
+                    </Link>
+                  </>
+                )}
+              </>
             )}
-            {token ? ( // Jika ada token, tampilkan tombol Logout
+            {token ? (
               <button
                 onClick={logout}
                 className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
               >
                 Logout
               </button>
-            ) : ( // Jika tidak, tampilkan link Login
+            ) : (
               <Link
                 href="/login"
                 className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -86,16 +110,29 @@ const Navbar = () => {
             <Link href="/" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
               Home
             </Link>
-            {token && ( // Tampilkan hanya jika sudah login
-                <Link href="/customer-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
-                    Customer Management
-                </Link>
+            {token && (
+                <>
+                    <Link href="/customer-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
+                        Customer Management
+                    </Link>
+                    {/* Tampilkan menu ini hanya jika isAdmin bernilai true */}
+                    {isAdmin && (
+                      <>
+                        <Link href="/user-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
+                            User Management
+                        </Link>
+                        <Link href="/role-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
+                            Role Management
+                        </Link>
+                      </>
+                    )}
+                </>
             )}
-            {token ? ( // Jika ada token, tampilkan tombol Logout
+            {token ? (
               <button onClick={handleLogout} className="text-left w-full hover:bg-red-700 p-3 rounded-lg">
                 Logout
               </button>
-            ) : ( // Jika tidak, tampilkan link Login
+            ) : (
               <Link href="/login" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
                 Login
               </Link>

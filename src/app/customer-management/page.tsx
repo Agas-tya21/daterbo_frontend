@@ -23,21 +23,20 @@ interface FileState {
 // Interface untuk payload token
 interface JwtPayload {
   sub: string; // Ann email pengguna
-  // Properti lain yang mungkin ada di token Anda
+  role?: string;
 }
 
 function CustomerManagementContent() {
   const [data, setData] = useState<DataPeminjam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // State untuk data baru atau data yang sedang diedit
   const [formData, setFormData] = useState<Partial<DataPeminjam>>({});
   const [formFiles, setFormFiles] = useState<FileState>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-
 
   const [users, setUsers] = useState<User[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -48,6 +47,9 @@ function CustomerManagementContent() {
   const [activeStatus, setActiveStatus] = useState<string>('Semua');
   const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
   const [selectedUser, setSelectedUser] = useState<string>('Semua');
+
+  // Cek apakah user adalah admin
+  const isAdmin = authUser?.role === 'R001';
 
   // Fungsi untuk mengambil semua data
   const fetchData = useCallback(async () => {
@@ -92,24 +94,52 @@ function CustomerManagementContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Logika untuk memfilter data
-  const filteredData = useMemo(() => {
-    return data.filter(item => {
-      const statusMatch = activeStatus === 'Semua' || item.status?.namastatus === activeStatus;
-      const leasingMatch = selectedLeasing === 'Semua' || item.leasing?.idleasing === selectedLeasing;
-      const userMatch = selectedUser === 'Semua' || item.user?.iduser === selectedUser;
-      return statusMatch && leasingMatch && userMatch;
-    });
-  }, [data, activeStatus, selectedLeasing, selectedUser]);
   
+  // Data source untuk perhitungan badge, disaring berdasarkan peran
+  const dataForCounts = useMemo(() => {
+    if (isAdmin || !currentUser) {
+      return data; // Admin melihat semua data
+    }
+    // Pengguna biasa hanya melihat data mereka sendiri
+    return data.filter(item => item.user?.iduser === currentUser.iduser);
+  }, [data, isAdmin, currentUser]);
+
+  // Logika untuk menghitung jumlah status pada badge
   const statusCounts = useMemo(() => {
     const counts: { [key: string]: number } = {};
     statuses.forEach(status => {
-        counts[status.namastatus] = data.filter(item => item.status?.namastatus === status.namastatus).length;
+        counts[status.namastatus] = dataForCounts.filter(item => item.status?.namastatus === status.namastatus).length;
     });
     return counts;
-  }, [data, statuses]);
+  }, [dataForCounts, statuses]);
+
+  // Logika untuk memfilter data yang ditampilkan di tabel
+  const filteredData = useMemo(() => {
+    let filtered = [...data];
+
+    // Jika bukan admin, filter berdasarkan pengguna yang login terlebih dahulu
+    if (!isAdmin && currentUser) {
+        filtered = filtered.filter(item => item.user?.iduser === currentUser.iduser);
+    }
+
+    // Filter berdasarkan status
+    if (activeStatus !== 'Semua') {
+      filtered = filtered.filter(item => item.status?.namastatus === activeStatus);
+    }
+
+    // Filter berdasarkan leasing
+    if (selectedLeasing !== 'Semua') {
+      filtered = filtered.filter(item => item.leasing?.idleasing === selectedLeasing);
+    }
+
+    // Filter berdasarkan user (hanya untuk admin)
+    if (isAdmin && selectedUser !== 'Semua') {
+      filtered = filtered.filter(item => item.user?.iduser === selectedUser);
+    }
+
+    return filtered;
+  }, [data, activeStatus, selectedLeasing, selectedUser, isAdmin, currentUser]);
+
 
   const openModalForCreate = () => {
     setEditingId(null);
@@ -180,6 +210,26 @@ function CustomerManagementContent() {
       fetchData(); // Refresh data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!token || !isAdmin) return;
+
+    if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal menghapus data.');
+        }
+        fetchData(); // Refresh data
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      }
     }
   };
 
@@ -305,7 +355,7 @@ function CustomerManagementContent() {
             <div className="flex items-center space-x-2 overflow-x-auto whitespace-nowrap p-1">
                 <button onClick={() => setActiveStatus('Semua')} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === 'Semua' ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
                     Semua
-                    <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">{data.length}</span>
+                    <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">{dataForCounts.length}</span>
                 </button>
                 {statuses.map(status => (
                     <button key={status.idstatus} onClick={() => setActiveStatus(status.namastatus)} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === status.namastatus ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
@@ -325,12 +375,15 @@ function CustomerManagementContent() {
                     <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
                 ))}
             </select>
-            <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                <option value="Semua">Semua User</option>
-                {users.map(user => (
-                    <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
-                ))}
-            </select>
+            {/* Filter by User, hanya tampil untuk admin */}
+            {isAdmin && (
+              <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                  <option value="Semua">Semua User</option>
+                  {users.map(user => (
+                      <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
+                  ))}
+              </select>
+            )}
         </div>
       </div>
       
@@ -401,6 +454,15 @@ function CustomerManagementContent() {
                             >
                                 Batal
                             </button>
+                        )}
+                        {/* Tombol Delete, hanya tampil untuk admin */}
+                        {isAdmin && (
+                          <button 
+                              onClick={() => handleDelete(item.iddatapeminjam)} 
+                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                          >
+                              Delete
+                          </button>
                         )}
                     </td>
                   </tr>
