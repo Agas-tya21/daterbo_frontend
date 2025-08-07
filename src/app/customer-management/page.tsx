@@ -48,8 +48,10 @@ function CustomerManagementContent() {
   const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
   const [selectedUser, setSelectedUser] = useState<string>('Semua');
 
-  // Cek apakah user adalah admin
+  // Cek apakah user adalah admin atau user yang bisa melihat semua data
+  const canViewAllData = authUser?.role === 'R001' || authUser?.role === 'R002';
   const isAdmin = authUser?.role === 'R001';
+
 
   // Fungsi untuk mengambil semua data
   const fetchData = useCallback(async () => {
@@ -94,15 +96,15 @@ function CustomerManagementContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  
+
   // Data source untuk perhitungan badge, disaring berdasarkan peran
   const dataForCounts = useMemo(() => {
-    if (isAdmin || !currentUser) {
-      return data; // Admin melihat semua data
+    if (canViewAllData || !currentUser) {
+      return data; // Admin dan User (R002) melihat semua data
     }
-    // Pengguna biasa hanya melihat data mereka sendiri
+    // Pengguna dengan peran lain hanya melihat data mereka sendiri
     return data.filter(item => item.user?.iduser === currentUser.iduser);
-  }, [data, isAdmin, currentUser]);
+  }, [data, canViewAllData, currentUser]);
 
   // Logika untuk menghitung jumlah status pada badge
   const statusCounts = useMemo(() => {
@@ -117,8 +119,8 @@ function CustomerManagementContent() {
   const filteredData = useMemo(() => {
     let filtered = [...data];
 
-    // Jika bukan admin, filter berdasarkan pengguna yang login terlebih dahulu
-    if (!isAdmin && currentUser) {
+    // Jika bukan admin atau user (R002), filter berdasarkan pengguna yang login
+    if (!canViewAllData && currentUser) {
         filtered = filtered.filter(item => item.user?.iduser === currentUser.iduser);
     }
 
@@ -132,13 +134,13 @@ function CustomerManagementContent() {
       filtered = filtered.filter(item => item.leasing?.idleasing === selectedLeasing);
     }
 
-    // Filter berdasarkan user (hanya untuk admin)
-    if (isAdmin && selectedUser !== 'Semua') {
+    // Filter berdasarkan user (hanya untuk admin dan user R002)
+    if (canViewAllData && selectedUser !== 'Semua') {
       filtered = filtered.filter(item => item.user?.iduser === selectedUser);
     }
 
     return filtered;
-  }, [data, activeStatus, selectedLeasing, selectedUser, isAdmin, currentUser]);
+  }, [data, activeStatus, selectedLeasing, selectedUser, canViewAllData, currentUser]);
 
 
   const openModalForCreate = () => {
@@ -368,23 +370,23 @@ function CustomerManagementContent() {
             </div>
         </div>
 
-        <div className='mt-4 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0'>
-            <select onChange={(e) => setSelectedLeasing(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                <option value="Semua">Semua Leasing</option>
-                {leasings.map(leasing => (
-                    <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
-                ))}
-            </select>
-            {/* Filter by User, hanya tampil untuk admin */}
-            {isAdmin && (
+        {/* Tampilkan filter tambahan hanya untuk admin dan user R002 */}
+        {canViewAllData && (
+          <div className='mt-4 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0'>
+              <select onChange={(e) => setSelectedLeasing(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                  <option value="Semua">Semua Leasing</option>
+                  {leasings.map(leasing => (
+                      <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
+                  ))}
+              </select>
               <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
                   <option value="Semua">Semua User</option>
                   {users.map(user => (
                       <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
                   ))}
               </select>
-            )}
-        </div>
+          </div>
+        )}
       </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-[20px] shadow-md p-4 overflow-hidden">
