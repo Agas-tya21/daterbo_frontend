@@ -17,6 +17,17 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  /* Tambahkan gaya mode gelap untuk elemen formulir */
+  input, select, textarea {
+    background-color: #1f2937; /* dark:bg-gray-700 */
+    color: #f9fafb; /* dark:text-gray-50 */
+    border-color: #4b5563; /* dark:border-gray-600 */
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af; /* dark:placeholder-gray-400 */
+  }
 }
 
 body {

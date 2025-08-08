@@ -32,6 +32,7 @@ function CustomerManagementContent() {
   const [error, setError] = useState<string | null>(null);
   const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // State baru untuk loading submit
   
   // State untuk data baru atau data yang sedang diedit
   const [formData, setFormData] = useState<Partial<DataPeminjam>>({});
@@ -105,7 +106,7 @@ function CustomerManagementContent() {
     // Pengguna dengan peran lain hanya melihat data mereka sendiri
     return data.filter(item => item.user?.iduser === currentUser.iduser);
   }, [data, canViewAllData, currentUser]);
-
+  
   // Logika untuk menghitung jumlah status pada badge
   const statusCounts = useMemo(() => {
     const counts: { [key: string]: number } = {};
@@ -183,8 +184,16 @@ function CustomerManagementContent() {
     e.preventDefault();
     if (!token) return;
 
+    setIsSubmitting(true); // Mulai loading
     const dataToSend = new FormData();
-    const finalData = { ...formData, user: { iduser: currentUser?.iduser } };
+    
+    const finalData = { ...formData };
+    if (!editingId && currentUser) {
+      finalData.user = { iduser: currentUser.iduser, namauser: '', email: '' };
+    } else {
+      delete finalData.user;
+    }
+
     dataToSend.append('data', JSON.stringify(finalData));
 
     Object.entries(formFiles).forEach(([key, file]) => {
@@ -212,6 +221,8 @@ function CustomerManagementContent() {
       fetchData(); // Refresh data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setIsSubmitting(false); // Selesai loading
     }
   };
 
@@ -307,7 +318,7 @@ function CustomerManagementContent() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-[20px] shadow-lg p-4 mb-4">
+      <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Customer Management</h1>
           <button onClick={openModalForCreate} className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
@@ -318,24 +329,24 @@ function CustomerManagementContent() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 dark:text-gray-200 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{editingId ? 'Edit Data Peminjam' : 'Tambah Data Peminjam Baru'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <input name="nik" placeholder="NIK" value={formData.nik || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="namapeminjam" placeholder="Nama Peminjam" value={formData.namapeminjam || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="nohp" placeholder="No. HP" value={formData.nohp || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="aset" placeholder="Aset" value={formData.aset || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="tahunaset" placeholder="Tahun Aset" value={formData.tahunaset || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="alamat" placeholder="Alamat" value={formData.alamat || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="kota" placeholder="Kota" value={formData.kota || ''} onChange={handleInputChange} className="p-2 border rounded" />
-                <input name="kecamatan" placeholder="Kecamatan" value={formData.kecamatan || ''} onChange={handleInputChange} className="p-2 border rounded" />
+                <input name="nik" placeholder="NIK" value={formData.nik || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="namapeminjam" placeholder="Nama Peminjam" value={formData.namapeminjam || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="nohp" placeholder="No. HP" value={formData.nohp || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="aset" placeholder="Aset" value={formData.aset || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="tahunaset" placeholder="Tahun Aset" value={formData.tahunaset || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="alamat" placeholder="Alamat" value={formData.alamat || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="kota" placeholder="Kota" value={formData.kota || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
+                <input name="kecamatan" placeholder="Kecamatan" value={formData.kecamatan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
                 <div><label className="text-sm">Tgl Input</label><input type="date" name="tglinput" value={formData.tglinput || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
                 <div><label className="text-sm">Tgl Penerimaan</label><input type="date" name="tglpenerimaan" value={formData.tglpenerimaan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
                 <div><label className="text-sm">Tgl Pencairan</label><input type="date" name="tglpencairan" value={formData.tglpencairan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
                 <textarea name="keterangan" placeholder="Keterangan" value={formData.keterangan || ''} onChange={handleInputChange} className="p-2 border rounded md:col-span-2 lg:col-span-3" />
-                <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select>
-                <select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select>
+                <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select>
+                <select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select>
                 <div><label>Foto KTP</label><input type="file" name="fotoktp" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Foto BPKB</label><input type="file" name="fotobpkb" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Foto STNK</label><input type="file" name="fotostnk" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
@@ -345,7 +356,12 @@ function CustomerManagementContent() {
                 <div><label>Buku Nikah</label><input type="file" name="fotobukunikah" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
                 <div><label>Sertifikat</label><input type="file" name="fotosertifikat" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
               </div>
-              <div className="mt-6 flex justify-end space-x-2"><button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Batal</button><button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Simpan</button></div>
+              <div className="mt-6 flex justify-end space-x-2">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600" disabled={isSubmitting}>Batal</button>
+                <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700" disabled={isSubmitting}>
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -389,7 +405,7 @@ function CustomerManagementContent() {
         )}
       </div>
       
-      <div className="bg-white dark:bg-gray-800 rounded-[20px] shadow-md p-4 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-[#fe0000] text-white">
