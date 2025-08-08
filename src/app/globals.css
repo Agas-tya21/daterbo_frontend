@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-datepicker/dist/react-datepicker.css";
 
 :root {
   --background: #ffffff;
@@ -28,10 +29,43 @@
   input::placeholder, textarea::placeholder {
     color: #9ca3af; /* dark:placeholder-gray-400 */
   }
+
+  /* Gaya dark mode untuk react-datepicker */
+  .react-datepicker {
+    background-color: #1f2937;
+    border-color: #4b5563;
+  }
+  .react-datepicker__header {
+    background-color: #374151;
+    border-bottom-color: #4b5563;
+  }
+  .react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header {
+    color: #f9fafb;
+  }
+  .react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name {
+    color: #d1d5db;
+  }
+  .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
+    background-color: #ef4444;
+    color: #ffffff;
+  }
+  .react-datepicker__day:hover {
+    background-color: #4b5563;
+  }
+  .react-datepicker__day--disabled {
+    color: #6b7280;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Kustomisasi untuk tanggal yang di-highlight */
+.highlighted-date {
+  background-color: #4ade80; /* hijau */
+  color: white;
+  border-radius: 50%;
 }

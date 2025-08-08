@@ -7,6 +7,7 @@ import { DataPeminjam, User, Status, Leasing } from '@/app/types';
 import { useAuth } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
 import { jwtDecode } from 'jwt-decode';
+import DatePicker from 'react-datepicker';
 
 // Interface untuk state file
 interface FileState {
@@ -32,7 +33,7 @@ function CustomerManagementContent() {
   const [error, setError] = useState<string | null>(null);
   const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // State baru untuk loading submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // State untuk data baru atau data yang sedang diedit
   const [formData, setFormData] = useState<Partial<DataPeminjam>>({});
@@ -48,6 +49,7 @@ function CustomerManagementContent() {
   const [activeStatus, setActiveStatus] = useState<string>('Semua');
   const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
   const [selectedUser, setSelectedUser] = useState<string>('Semua');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Cek apakah user adalah admin atau user yang bisa melihat semua data
   const canViewAllData = authUser?.role === 'R001' || authUser?.role === 'R002';
@@ -76,6 +78,9 @@ function CustomerManagementContent() {
       const userData: User[] = await userRes.json();
       const statusData: Status[] = await statusRes.json();
       const leasingData: Leasing[] = await leasingRes.json();
+
+      // Urutkan data berdasarkan tglinput (terbaru dulu)
+      peminjamData.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
 
       setData(peminjamData);
       setUsers(userData);
@@ -116,9 +121,20 @@ function CustomerManagementContent() {
     return counts;
   }, [dataForCounts, statuses]);
 
+  const datesWithData = useMemo(() => {
+    // Menggunakan Set untuk performa yang lebih baik
+    return new Set(data.map(item => new Date(item.tglinput).toDateString()));
+  }, [data]);
+
   // Logika untuk memfilter data yang ditampilkan di tabel
   const filteredData = useMemo(() => {
     let filtered = [...data];
+
+    // Filter by date
+    if (selectedDate) {
+      const dateString = selectedDate.toDateString();
+      filtered = filtered.filter(item => new Date(item.tglinput).toDateString() === dateString);
+    }
 
     // Jika bukan admin atau user (R002), filter berdasarkan pengguna yang login
     if (!canViewAllData && currentUser) {
@@ -141,7 +157,7 @@ function CustomerManagementContent() {
     }
 
     return filtered;
-  }, [data, activeStatus, selectedLeasing, selectedUser, canViewAllData, currentUser]);
+  }, [data, activeStatus, selectedLeasing, selectedUser, canViewAllData, currentUser, selectedDate]);
 
 
   const openModalForCreate = () => {
@@ -183,8 +199,8 @@ function CustomerManagementContent() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
-
-    setIsSubmitting(true); // Mulai loading
+    
+    setIsSubmitting(true);
     const dataToSend = new FormData();
     
     const finalData = { ...formData };
@@ -222,7 +238,7 @@ function CustomerManagementContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
-      setIsSubmitting(false); // Selesai loading
+      setIsSubmitting(false);
     }
   };
 
@@ -386,23 +402,37 @@ function CustomerManagementContent() {
             </div>
         </div>
 
-        {/* Tampilkan filter tambahan hanya untuk admin dan user R002 */}
-        {canViewAllData && (
-          <div className='mt-4 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0'>
-              <select onChange={(e) => setSelectedLeasing(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                  <option value="Semua">Semua Leasing</option>
-                  {leasings.map(leasing => (
-                      <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
-                  ))}
-              </select>
-              <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                  <option value="Semua">Semua User</option>
-                  {users.map(user => (
-                      <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
-                  ))}
-              </select>
-          </div>
-        )}
+        {/* Filter tambahan */}
+        <div className='mt-4 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0'>
+            <DatePicker
+                selected={selectedDate}
+                onChange={(date) => setSelectedDate(date)}
+                dayClassName={date => 
+                  datesWithData.has(date.toDateString())
+                    ? 'highlighted-date' 
+                    : ''
+                }
+                placeholderText="Filter by tanggal input"
+                isClearable
+                className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full"
+            />
+            {canViewAllData && (
+              <>
+                <select onChange={(e) => setSelectedLeasing(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                    <option value="Semua">Semua Leasing</option>
+                    {leasings.map(leasing => (
+                        <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
+                    ))}
+                </select>
+                <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
+                    <option value="Semua">Semua User</option>
+                    {users.map(user => (
+                        <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
+                    ))}
+                </select>
+              </>
+            )}
+        </div>
       </div>
       
       <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
