@@ -53,7 +53,7 @@ function CustomerDetailPageContent() {
         <img src={url} alt={alt} className="w-full h-auto rounded-lg shadow-md object-cover" />
       </a>
     ) : (
-      <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500">
+      <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-xs">
         Tidak Ada Gambar
       </div>
     );
@@ -61,11 +61,11 @@ function CustomerDetailPageContent() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold mb-4">Detail Pelanggan: {customer.namapeminjam}</h1>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-sm"> {/* Ukuran font dasar */}
+        <h1 className="text-2xl font-bold mb-4">Detail Pelanggan: {customer.namapeminjam}</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Informasi Teks */}
-          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-xs"> {/* Ukuran font lebih kecil */}
             <div><strong>NIK:</strong> {customer.nik}</div>
             <div><strong>No. HP:</strong> {customer.nohp}</div>
             <div><strong>Aset:</strong> {customer.aset} ({customer.tahunaset})</div>
@@ -81,16 +81,16 @@ function CustomerDetailPageContent() {
 
           {/* Galeri Gambar */}
           <div className="md:col-span-2 lg:col-span-3">
-             <h2 className="text-2xl font-bold mb-4 border-b pb-2">Dokumen Terlampir</h2>
+             <h2 className="text-xl font-bold mb-4 border-b pb-2">Dokumen Terlampir</h2>
              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <div><h3 className="font-semibold mb-2">Foto KTP</h3>{renderImage(customer.fotoktp, 'Foto KTP')}</div>
-                <div><h3 className="font-semibold mb-2">Foto BPKB</h3>{renderImage(customer.fotobpkb, 'Foto BPKB')}</div>
-                <div><h3 className="font-semibold mb-2">Foto STNK</h3>{renderImage(customer.fotostnk, 'Foto STNK')}</div>
-                <div><h3 className="font-semibold mb-2">Foto KK</h3>{renderImage(customer.fotokk, 'Foto KK')}</div>
-                <div><h3 className="font-semibold mb-2">Rekening Koran</h3>{renderImage(customer.fotorekeningkoran, 'Rekening Koran')}</div>
-                <div><h3 className="font-semibold mb-2">Rekening Listrik</h3>{renderImage(customer.fotorekeninglistrik, 'Rekening Listrik')}</div>
-                <div><h3 className="font-semibold mb-2">Buku Nikah</h3>{renderImage(customer.fotobukunikah, 'Buku Nikah')}</div>
-                <div><h3 className="font-semibold mb-2">Sertifikat</h3>{renderImage(customer.fotosertifikat, 'Sertifikat')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Foto KTP</h3>{renderImage(customer.fotoktp, 'Foto KTP')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Foto BPKB</h3>{renderImage(customer.fotobpkb, 'Foto BPKB')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Foto STNK</h3>{renderImage(customer.fotostnk, 'Foto STNK')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Foto KK</h3>{renderImage(customer.fotokk, 'Foto KK')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Rekening Koran</h3>{renderImage(customer.fotorekeningkoran, 'Rekening Koran')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Rekening Listrik</h3>{renderImage(customer.fotorekeninglistrik, 'Rekening Listrik')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Buku Nikah</h3>{renderImage(customer.fotobukunikah, 'Buku Nikah')}</div>
+                <div><h3 className="font-semibold mb-2 text-xs">Sertifikat</h3>{renderImage(customer.fotosertifikat, 'Sertifikat')}</div>
              </div>
           </div>
         </div>

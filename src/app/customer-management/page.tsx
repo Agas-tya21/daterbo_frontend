@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState, FormEvent, ChangeEvent, useMemo, useCallback } from 'react';
-import Link from 'next/link';
 import { API_BASE_URL } from '@/config/api';
 import { DataPeminjam, User, Status, Leasing } from '@/app/types';
 import { useAuth } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
 import { jwtDecode } from 'jwt-decode';
-import DatePicker from 'react-datepicker';
+import FilterSection from './components/FilterSection';
+import CustomerTable from './components/CustomerTable';
+import CustomerModal from './components/CustomerModal';
 
 // Interface untuk state file
 interface FileState {
@@ -50,6 +51,7 @@ function CustomerManagementContent() {
   const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
   const [selectedUser, setSelectedUser] = useState<string>('Semua');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState(''); // State baru untuk search
 
   // Cek apakah user adalah admin atau user yang bisa melihat semua data
   const canViewAllData = authUser?.role === 'R001' || authUser?.role === 'R002';
@@ -103,32 +105,22 @@ function CustomerManagementContent() {
     fetchData();
   }, [fetchData]);
 
-  // Data source untuk perhitungan badge, disaring berdasarkan peran
-  const dataForCounts = useMemo(() => {
-    if (canViewAllData || !currentUser) {
-      return data; // Admin dan User (R002) melihat semua data
-    }
-    // Pengguna dengan peran lain hanya melihat data mereka sendiri
-    return data.filter(item => item.user?.iduser === currentUser.iduser);
-  }, [data, canViewAllData, currentUser]);
-  
-  // Logika untuk menghitung jumlah status pada badge
-  const statusCounts = useMemo(() => {
-    const counts: { [key: string]: number } = {};
-    statuses.forEach(status => {
-        counts[status.namastatus] = dataForCounts.filter(item => item.status?.namastatus === status.namastatus).length;
-    });
-    return counts;
-  }, [dataForCounts, statuses]);
-
   const datesWithData = useMemo(() => {
     // Menggunakan Set untuk performa yang lebih baik
     return new Set(data.map(item => new Date(item.tglinput).toDateString()));
   }, [data]);
 
-  // Logika untuk memfilter data yang ditampilkan di tabel
-  const filteredData = useMemo(() => {
+  // Logika untuk data yang telah difilter (untuk badge dan tabel)
+  const baseFilteredData = useMemo(() => {
     let filtered = [...data];
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.nik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.namapeminjam.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
     // Filter by date
     if (selectedDate) {
@@ -139,11 +131,6 @@ function CustomerManagementContent() {
     // Jika bukan admin atau user (R002), filter berdasarkan pengguna yang login
     if (!canViewAllData && currentUser) {
         filtered = filtered.filter(item => item.user?.iduser === currentUser.iduser);
-    }
-
-    // Filter berdasarkan status
-    if (activeStatus !== 'Semua') {
-      filtered = filtered.filter(item => item.status?.namastatus === activeStatus);
     }
 
     // Filter berdasarkan leasing
@@ -157,7 +144,24 @@ function CustomerManagementContent() {
     }
 
     return filtered;
-  }, [data, activeStatus, selectedLeasing, selectedUser, canViewAllData, currentUser, selectedDate]);
+  }, [data, searchQuery, selectedDate, selectedLeasing, selectedUser, canViewAllData, currentUser]);
+
+  // Logika untuk menghitung jumlah status pada badge berdasarkan data yang sudah difilter
+  const statusCounts = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    statuses.forEach(status => {
+        counts[status.namastatus] = baseFilteredData.filter(item => item.status?.namastatus === status.namastatus).length;
+    });
+    return counts;
+  }, [baseFilteredData, statuses]);
+
+  // Logika untuk memfilter data akhir yang ditampilkan di tabel
+  const filteredData = useMemo(() => {
+    if (activeStatus === 'Semua') {
+      return baseFilteredData;
+    }
+    return baseFilteredData.filter(item => item.status?.namastatus === activeStatus);
+  }, [baseFilteredData, activeStatus]);
 
 
   const openModalForCreate = () => {
@@ -343,187 +347,46 @@ function CustomerManagementContent() {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 dark:text-gray-200 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">{editingId ? 'Edit Data Peminjam' : 'Tambah Data Peminjam Baru'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <input name="nik" placeholder="NIK" value={formData.nik || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="namapeminjam" placeholder="Nama Peminjam" value={formData.namapeminjam || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="nohp" placeholder="No. HP" value={formData.nohp || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="aset" placeholder="Aset" value={formData.aset || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="tahunaset" placeholder="Tahun Aset" value={formData.tahunaset || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="alamat" placeholder="Alamat" value={formData.alamat || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="kota" placeholder="Kota" value={formData.kota || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <input name="kecamatan" placeholder="Kecamatan" value={formData.kecamatan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
-                <div><label className="text-sm">Tgl Input</label><input type="date" name="tglinput" value={formData.tglinput || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
-                <div><label className="text-sm">Tgl Penerimaan</label><input type="date" name="tglpenerimaan" value={formData.tglpenerimaan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
-                <div><label className="text-sm">Tgl Pencairan</label><input type="date" name="tglpencairan" value={formData.tglpencairan || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /></div>
-                <textarea name="keterangan" placeholder="Keterangan" value={formData.keterangan || ''} onChange={handleInputChange} className="p-2 border rounded md:col-span-2 lg:col-span-3" />
-                <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select>
-                <select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select>
-                <div><label>Foto KTP</label><input type="file" name="fotoktp" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Foto BPKB</label><input type="file" name="fotobpkb" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Foto STNK</label><input type="file" name="fotostnk" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Foto KK</label><input type="file" name="fotokk" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Rekening Koran</label><input type="file" name="fotorekeningkoran" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Rekening Listrik</label><input type="file" name="fotorekeninglistrik" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Buku Nikah</label><input type="file" name="fotobukunikah" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-                <div><label>Sertifikat</label><input type="file" name="fotosertifikat" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
-              </div>
-              <div className="mt-6 flex justify-end space-x-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600" disabled={isSubmitting}>Batal</button>
-                <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700" disabled={isSubmitting}>
-                  {isSubmitting ? 'Menyimpan...' : 'Simpan'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CustomerModal
+        isOpen={isModalOpen}
+        setIsOpen={setIsModalOpen}
+        handleSubmit={handleSubmit}
+        editingId={editingId}
+        formData={formData}
+        handleInputChange={handleInputChange}
+        handleFileChange={handleFileChange}
+        statuses={statuses}
+        leasings={leasings}
+        isSubmitting={isSubmitting}
+      />
 
-      {/* Area Filter */}
-      <div className='mb-4'>
-        <div className="bg-red-600 rounded-full p-1 pt-3">
-            <div className="flex items-center space-x-2 overflow-x-auto whitespace-nowrap p-1">
-                <button onClick={() => setActiveStatus('Semua')} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === 'Semua' ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
-                    Semua
-                    <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">{dataForCounts.length}</span>
-                </button>
-                {statuses.map(status => (
-                    <button key={status.idstatus} onClick={() => setActiveStatus(status.namastatus)} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-sm font-bold rounded-full transition-colors duration-300 ${activeStatus === status.namastatus ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
-                        {status.namastatus}
-                        <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {statusCounts[status.namastatus] || 0}
-                        </span>
-                    </button>
-                ))}
-            </div>
-        </div>
-
-        {/* Filter tambahan */}
-        <div className='mt-4 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0'>
-            <DatePicker
-                selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
-                dayClassName={date => 
-                  datesWithData.has(date.toDateString())
-                    ? 'highlighted-date' 
-                    : ''
-                }
-                placeholderText="Filter by tanggal input"
-                isClearable
-                className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full"
-            />
-            {canViewAllData && (
-              <>
-                <select onChange={(e) => setSelectedLeasing(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                    <option value="Semua">Semua Leasing</option>
-                    {leasings.map(leasing => (
-                        <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>
-                    ))}
-                </select>
-                <select onChange={(e) => setSelectedUser(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full">
-                    <option value="Semua">Semua User</option>
-                    {users.map(user => (
-                        <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
-                    ))}
-                </select>
-              </>
-            )}
-        </div>
-      </div>
+      <FilterSection
+        activeStatus={activeStatus}
+        setActiveStatus={setActiveStatus}
+        baseFilteredData={baseFilteredData}
+        statuses={statuses}
+        statusCounts={statusCounts}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        datesWithData={datesWithData}
+        canViewAllData={canViewAllData}
+        leasings={leasings}
+        setSelectedLeasing={setSelectedLeasing}
+        users={users}
+        setSelectedUser={setSelectedUser}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
       
-      <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-[#fe0000] text-white">
-              <tr>
-                <th className="py-3 px-4 text-left">No.</th>
-                <th className="py-3 px-4 text-left">NIK</th>
-                <th className="py-3 px-4 text-left">Nama Peminjam</th>
-                <th className="py-3 px-4 text-left">User</th>
-                <th className="py-3 px-4 text-left">No. HP</th>
-                <th className="py-3 px-4 text-left">Aset</th>
-                <th className="py-3 px-4 text-left">Tahun Aset</th>
-                <th className="py-3 px-4 text-left">Kota</th>
-                <th className="py-3 px-4 text-left">Status</th>
-                <th className="py-3 px-4 text-left">Leasing</th>
-                <th className="py-3 px-4 text-left">Tgl Input</th>
-                <th className="py-3 px-4 text-left">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length > 0 ? (
-                filteredData.map((item, index) => (
-                  <tr key={item.iddatapeminjam} className="hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-700">
-                    <td className="py-2 px-4">{index + 1}</td>
-                    <td className="py-2 px-4">{item.nik}</td>
-                    <td className="py-2 px-4">{item.namapeminjam}</td>
-                    <td className="py-2 px-4">{item.user?.namauser}</td>
-                    <td className="py-2 px-4">{item.nohp}</td>
-                    <td className="py-2 px-4">{item.aset}</td>
-                    <td className="py-2 px-4">{item.tahunaset}</td>
-                    <td className="py-2 px-4">{item.kota}</td>
-                    <td className="py-2 px-4">{item.status?.namastatus}</td>
-                    <td className="py-2 px-4">{item.leasing?.namaleasing}</td>
-                    <td className="py-2 px-4">{new Date(item.tglinput).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 flex space-x-2">
-                        <Link href={`/customer-management/${item.iddatapeminjam}`} className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
-                            Detail
-                        </Link>
-                        <button 
-                            onClick={() => openModalForEdit(item)} 
-                            className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                        >
-                            Update
-                        </button>
-                        {item.status?.idstatus === 'S001' && (
-                            <button 
-                                onClick={() => handleProses(item.iddatapeminjam)} 
-                                className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                            >
-                                Proses
-                            </button>
-                        )}
-                        {item.status?.idstatus === 'S002' && (
-                            <button 
-                                onClick={() => handleCair(item.iddatapeminjam)} 
-                                className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
-                            >
-                                Cair
-                            </button>
-                        )}
-                        {(item.status?.idstatus === 'S001' || item.status?.idstatus === 'S002') && (
-                            <button 
-                                onClick={() => handleBatal(item.iddatapeminjam)} 
-                                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                            >
-                                Batal
-                            </button>
-                        )}
-                        {/* Tombol Delete, hanya tampil untuk admin */}
-                        {isAdmin && (
-                          <button 
-                              onClick={() => handleDelete(item.iddatapeminjam)} 
-                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                          >
-                              Delete
-                          </button>
-                        )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={12} className="py-4 px-4 text-center">Tidak ada data untuk ditampilkan.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CustomerTable
+        filteredData={filteredData}
+        openModalForEdit={openModalForEdit}
+        handleProses={handleProses}
+        handleCair={handleCair}
+        handleBatal={handleBatal}
+        handleDelete={handleDelete}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }
