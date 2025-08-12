@@ -36,6 +36,41 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
     return `https://wa.me/${cleaned}`;
   };
 
+  // Fungsi baru untuk mengubah nomor HP di Keterangan menjadi link
+  const linkifyKeterangan = (text: string | null | undefined) => {
+    if (!text) return null;
+
+    return text.split('\n').map((line, index) => {
+      // Mencocokkan baris yang mengandung "No HP :"
+      const match = line.match(/^(.*No HP\s*:\s*)(.*)$/i);
+      
+      if (match) {
+        const [, label, numberStr] = match;
+        const number = numberStr.trim();
+        
+        if (number) {
+          const waLink = formatWhatsAppLink(number);
+          return (
+            <div key={index}>
+              {label}
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
+                {number}
+              </a>
+            </div>
+          );
+        }
+      }
+      
+      // Kembalikan baris seperti biasa jika tidak ada nomor HP
+      return <div key={index}>{line}</div>;
+    });
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
       <div className="overflow-x-auto">
@@ -86,7 +121,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                       <div>
                         {expandedKeteranganId === item.iddatapeminjam ? (
                           <>
-                            {item.keterangan}
+                            {linkifyKeterangan(item.keterangan)}
                             <button
                               onClick={() => setExpandedKeteranganId(null)}
                               className="text-blue-500 hover:underline ml-2 text-xs"
@@ -96,8 +131,11 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                           </>
                         ) : (
                           <>
-                            {item.keterangan.length > 100 ? `${item.keterangan.substring(0, 100)}...` : item.keterangan}
-                            {item.keterangan.length > 100 && (
+                            {item.keterangan.length > 150 
+                                ? <>{linkifyKeterangan(item.keterangan.substring(0, 150) + '...')}</>
+                                : linkifyKeterangan(item.keterangan)}
+
+                            {item.keterangan.length > 150 && (
                               <button
                                 onClick={() => setExpandedKeteranganId(item.iddatapeminjam)}
                                 className="text-blue-500 hover:underline ml-2 text-xs"

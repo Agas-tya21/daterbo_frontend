@@ -10,7 +10,7 @@ function RoleManagementContent() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const { token, logout } = useAuth(); // Ambil fungsi logout
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Role>>({});
@@ -26,6 +26,11 @@ function RoleManagementContent() {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
+      if (response.status === 401 || response.status === 403) {
+        logout();
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Gagal mengambil data role.');
       }
@@ -36,7 +41,7 @@ function RoleManagementContent() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
     fetchData();
@@ -76,6 +81,11 @@ function RoleManagementContent() {
         body: JSON.stringify(formData),
       });
 
+      if (response.status === 401 || response.status === 403) {
+        logout();
+        return;
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || 'Gagal menyimpan data role.');
@@ -98,6 +108,11 @@ function RoleManagementContent() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
+        if (response.status === 401 || response.status === 403) {
+          logout();
+          return;
+        }
+
         if (!response.ok) throw new Error('Gagal menghapus role.');
         fetchData();
       } catch (err) {
@@ -110,6 +125,7 @@ function RoleManagementContent() {
   if (error) return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
 
   return (
+    // ... JSX tetap sama
     <div className="container mx-auto p-4">
       <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">

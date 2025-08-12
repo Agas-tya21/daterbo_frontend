@@ -9,8 +9,10 @@ import { jwtDecode } from 'jwt-decode';
 import FilterSection from './components/FilterSection';
 import CustomerTable from './components/CustomerTable';
 import CustomerModal from './components/CustomerModal';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
-// Interface untuk state file
+// Interface for state file
 interface FileState {
   fotoktp?: File;
   fotobpkb?: File;
@@ -22,7 +24,7 @@ interface FileState {
   fotosertifikat?: File;
 }
 
-// Interface untuk payload token
+// Interface for payload token
 interface JwtPayload {
   sub: string; // Ann email pengguna
   role?: string;
@@ -32,7 +34,7 @@ function CustomerManagementContent() {
   const [data, setData] = useState<DataPeminjam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
+  const { token, user: authUser, logout } = useAuth(); // Ambil fungsi logout
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -65,24 +67,29 @@ function CustomerManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      const [peminjamRes, userRes, statusRes, leasingRes] = await Promise.all([
+      const responses = await Promise.all([
         fetch(`${API_BASE_URL}/datapeminjam`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/users`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/status`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/leasing`, { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
 
-      if (!peminjamRes.ok || !userRes.ok || !statusRes.ok || !leasingRes.ok) {
-        throw new Error('Gagal mengambil data atau sesi Anda telah berakhir.');
+      // Cek jika sesi habis
+      for (const response of responses) {
+        if (response.status === 401 || response.status === 403) {
+          logout();
+          return;
+        }
       }
 
-      const peminjamData: DataPeminjam[] = await peminjamRes.json();
-      const userData: User[] = await userRes.json();
-      const statusData: Status[] = await statusRes.json();
-      const leasingData: Leasing[] = await leasingRes.json();
+      if (responses.some(res => !res.ok)) {
+        throw new Error('Gagal mengambil data atau sesi Anda telah berakhir.');
+      }
+      
+      const [peminjamData, userData, statusData, leasingData] = await Promise.all(responses.map(res => res.json()));
 
       // Urutkan data berdasarkan tglinput (terbaru dulu)
-      peminjamData.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
+      peminjamData.sort((a: DataPeminjam, b: DataPeminjam) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
 
       setData(peminjamData);
       setUsers(userData);
@@ -91,7 +98,7 @@ function CustomerManagementContent() {
 
       const decodedToken: JwtPayload = jwtDecode(token);
       const userEmail = decodedToken.sub;
-      const loggedInUser = userData.find(user => user.email === userEmail);
+      const loggedInUser = userData.find((user: User) => user.email === userEmail);
       setCurrentUser(loggedInUser || null);
 
     } catch (err: unknown) {
@@ -99,7 +106,7 @@ function CustomerManagementContent() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
     fetchData();
@@ -116,9 +123,10 @@ function CustomerManagementContent() {
 
     // Filter by search query
     if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(item =>
-        item.nik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.namapeminjam.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.nik && item.nik.toLowerCase().includes(lowercasedQuery)) ||
+        (item.namapeminjam && item.namapeminjam.toLowerCase().includes(lowercasedQuery))
       );
     }
 
@@ -166,7 +174,19 @@ function CustomerManagementContent() {
 
   const openModalForCreate = () => {
     setEditingId(null);
-    setFormData({});
+    const defaultKeterangan = `PIC
+Nama PIC :
+No HP :
+Asal Leasing :
+
+SURVEYOR
+Nama Surveyor :
+No HP :
+Asal Leasing : 
+
+Keterangan :
+`;
+    setFormData({ keterangan: defaultKeterangan });
     setFormFiles({});
     setIsModalOpen(true);
   };
@@ -232,6 +252,11 @@ function CustomerManagementContent() {
         body: dataToSend,
       });
 
+      if (response.status === 401 || response.status === 403) {
+        logout();
+        return;
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || 'Gagal menyimpan data.');
@@ -256,6 +281,11 @@ function CustomerManagementContent() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            return;
+        }
+
         if (!response.ok) {
           throw new Error('Gagal menghapus data.');
         }
@@ -265,71 +295,67 @@ function CustomerManagementContent() {
       }
     }
   };
-
-  const handleProses = async (id: string) => {
+  
+  const handleStatusUpdate = async (url: string) => {
     if (!token) {
-      setError("Aksi tidak diizinkan. Silakan login kembali.");
-      return;
+        setError("Aksi tidak diizinkan. Silakan login kembali.");
+        return;
     }
-
     try {
-      const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/proses`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Gagal memproses data.');
-      fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-    }
-  };
-
-  const handleBatal = async (id: string) => {
-    if (!token) {
-      setError("Aksi tidak diizinkan. Silakan login kembali.");
-      return;
-    }
-
-    if (window.confirm("Apakah Anda yakin ingin membatalkan data ini?")) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/batal`, {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}` },
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (!response.ok) throw new Error('Gagal membatalkan data.');
-        fetchData();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-      }
-    }
-  };
-
-  const handleCair = async (id: string) => {
-    if (!token) {
-      setError("Aksi tidak diizinkan. Silakan login kembali.");
-      return;
-    }
-
-    if (window.confirm("Apakah Anda yakin ingin mengubah status menjadi CAIR?")) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/cair`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Gagal mengubah status menjadi cair.');
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            return;
         }
-        
-        fetchData(); // Refresh data setelah berhasil
-      } catch (err) {
+
+        if (!response.ok) throw new Error('Gagal memperbarui status data.');
+        fetchData();
+    } catch (err) {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-      }
     }
+  };
+  
+  const handleProses = (id: string) => handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/proses`);
+  
+  const handleCair = (id: string) => {
+      if (window.confirm("Apakah Anda yakin ingin mengubah status menjadi CAIR?")) {
+          handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/cair`);
+      }
+  };
+  
+  const handleBatal = (id: string) => {
+      if (window.confirm("Apakah Anda yakin ingin membatalkan data ini?")) {
+          handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/batal`);
+      }
+  };
+  
+  const handleExport = () => {
+    const fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
+    const fileExtension = '.xlsx';
+
+    const formattedData = filteredData.map(item => ({
+      'NIK': item.nik,
+      'Nama Peminjam': item.namapeminjam,
+      'User': item.user?.namauser,
+      'No. HP': item.nohp,
+      'Aset': item.aset,
+      'Tahun Aset': item.tahunaset,
+      'Kota': item.kota,
+      'Status': item.status?.namastatus,
+      'Leasing': item.leasing?.namaleasing,
+      'Tanggal Input': new Date(item.tglinput).toLocaleDateString(),
+      'Keterangan': item.keterangan,
+    }));
+  
+    const ws = XLSX.utils.json_to_sheet(formattedData);
+    const wb = { Sheets: { 'data': ws }, SheetNames: ['data'] };
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {type: fileType});
+    saveAs(data, 'filtered_data' + fileExtension);
   };
 
 
@@ -341,9 +367,18 @@ function CustomerManagementContent() {
       <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Customer Management</h1>
-          <button onClick={openModalForCreate} className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
-            Tambah Data
-          </button>
+          <div>
+            <button 
+                onClick={handleExport} 
+                className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 mr-2">
+              Export to Excel
+            </button>
+            <button 
+                onClick={openModalForCreate} 
+                className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
+              Tambah Data
+            </button>
+          </div>
         </div>
       </div>
 
