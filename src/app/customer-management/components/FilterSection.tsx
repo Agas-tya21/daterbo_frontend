@@ -1,7 +1,7 @@
 'use client';
 
 import DatePicker from 'react-datepicker';
-import { Status, Leasing, User, DataPeminjam } from '@/app/types';
+import { Status, Leasing, User, DataPeminjam, Pic, Surveyor } from '@/app/types';
 
 interface FilterSectionProps {
   activeStatus: string;
@@ -17,6 +17,10 @@ interface FilterSectionProps {
   setSelectedLeasing: (leasing: string) => void;
   users: User[];
   setSelectedUser: (user: string) => void;
+  pics: Pic[];
+  setSelectedPic: (pic: string) => void;
+  surveyors: Surveyor[];
+  setSelectedSurveyor: (surveyor: string) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }
@@ -35,6 +39,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   setSelectedLeasing,
   users,
   setSelectedUser,
+  pics,
+  setSelectedPic,
+  surveyors,
+  setSelectedSurveyor,
   searchQuery,
   setSearchQuery,
 }) => {
@@ -89,6 +97,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 <option value="Semua">Semua User</option>
                 {users.map(user => (
                     <option key={user.iduser} value={user.iduser}>{user.namauser}</option>
+                ))}
+            </select>
+            <select onChange={(e) => setSelectedPic(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full text-xs">
+                <option value="Semua">Semua PIC</option>
+                {pics.map(pic => (
+                    <option key={pic.idpic} value={pic.idpic}>{`${pic.namapic} - ${pic.namaleasing} (${pic.asalleasing})`}</option>
+                ))}
+            </select>
+            <select onChange={(e) => setSelectedSurveyor(e.target.value)} className="w-full md:w-auto bg-gray-200 text-black font-bold py-2 px-4 rounded-full text-xs">
+                <option value="Semua">Semua Surveyor</option>
+                {surveyors.map(surveyor => (
+                    <option key={surveyor.id} value={surveyor.id}>{`${surveyor.namasurveyor} - ${surveyor.namaleasing} (${surveyor.asalleasing})`}</option>
                 ))}
             </select>
           </>

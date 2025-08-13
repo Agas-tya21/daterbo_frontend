@@ -27,54 +27,18 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
   const [expandedKeteranganId, setExpandedKeteranganId] = useState<string | null>(null);
 
   const formatWhatsAppLink = (phone: string) => {
-    // Menghapus karakter non-numerik
+    if (!phone) return '';
     let cleaned = ('' + phone).replace(/\D/g, '');
-    // Mengganti awalan 0 dengan 62 (kode negara Indonesia)
     if (cleaned.startsWith('0')) {
       cleaned = '62' + cleaned.substring(1);
     }
     return `https://wa.me/${cleaned}`;
   };
 
-  // Fungsi baru untuk mengubah nomor HP di Keterangan menjadi link
-  const linkifyKeterangan = (text: string | null | undefined) => {
-    if (!text) return null;
-
-    return text.split('\n').map((line, index) => {
-      // Mencocokkan baris yang mengandung "No HP :"
-      const match = line.match(/^(.*No HP\s*:\s*)(.*)$/i);
-      
-      if (match) {
-        const [, label, numberStr] = match;
-        const number = numberStr.trim();
-        
-        if (number) {
-          const waLink = formatWhatsAppLink(number);
-          return (
-            <div key={index}>
-              {label}
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                {number}
-              </a>
-            </div>
-          );
-        }
-      }
-      
-      // Kembalikan baris seperti biasa jika tidak ada nomor HP
-      return <div key={index}>{line}</div>;
-    });
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm"> {/* Ukuran font dasar untuk tabel */}
+        <table className="min-w-full text-sm">
           <thead className="bg-[#fe0000] text-white">
             <tr>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">No.</th>
@@ -89,6 +53,10 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">Leasing</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">Tgl Input</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider min-w-[200px]">Keterangan</th>
+              <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">PIC</th>
+              <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">No. HP PIC</th>
+              <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">Surveyor</th>
+              <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">No. HP Surveyor</th>
               <th className="sticky right-0 bg-[#fe0000] py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">Aksi</th>
             </tr>
           </thead>
@@ -121,7 +89,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                       <div>
                         {expandedKeteranganId === item.iddatapeminjam ? (
                           <>
-                            {linkifyKeterangan(item.keterangan)}
+                            {item.keterangan}
                             <button
                               onClick={() => setExpandedKeteranganId(null)}
                               className="text-blue-500 hover:underline ml-2 text-xs"
@@ -131,11 +99,8 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                           </>
                         ) : (
                           <>
-                            {item.keterangan.length > 150 
-                                ? <>{linkifyKeterangan(item.keterangan.substring(0, 150) + '...')}</>
-                                : linkifyKeterangan(item.keterangan)}
-
-                            {item.keterangan.length > 150 && (
+                            {item.keterangan.length > 100 ? `${item.keterangan.substring(0, 100)}...` : item.keterangan}
+                            {item.keterangan.length > 100 && (
                               <button
                                 onClick={() => setExpandedKeteranganId(item.iddatapeminjam)}
                                 className="text-blue-500 hover:underline ml-2 text-xs"
@@ -146,6 +111,32 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                           </>
                         )}
                       </div>
+                    )}
+                  </td>
+                  <td className="py-2 px-4 text-xs whitespace-nowrap">{item.pic ? `${item.pic.namapic} - ${item.pic.namaleasing} (${item.pic.asalleasing})` : ''}</td>
+                  <td className="py-2 px-4 text-xs">
+                    {item.pic?.nohp && (
+                      <a 
+                        href={formatWhatsAppLink(item.pic.nohp)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        {item.pic.nohp}
+                      </a>
+                    )}
+                  </td>
+                  <td className="py-2 px-4 text-xs whitespace-nowrap">{item.surveyor ? `${item.surveyor.namasurveyor} - ${item.surveyor.namaleasing} (${item.surveyor.asalleasing})` : ''}</td>
+                  <td className="py-2 px-4 text-xs">
+                    {item.surveyor?.nowa && (
+                      <a 
+                        href={formatWhatsAppLink(item.surveyor.nowa)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        {item.surveyor.nowa}
+                      </a>
                     )}
                   </td>
                   <td className="sticky right-0 bg-white dark:bg-gray-800 py-2 px-4">
@@ -163,7 +154,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
               ))
             ) : (
               <tr>
-                <td colSpan={13} className="py-4 px-4 text-center text-sm">Tidak ada data untuk ditampilkan.</td>
+                <td colSpan={17} className="py-4 px-4 text-center text-sm">Tidak ada data untuk ditampilkan.</td>
               </tr>
             )}
           </tbody>

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent } from 'react';
-import { DataPeminjam, Status, Leasing } from '@/app/types';
+import { DataPeminjam, Status, Leasing, Pic, Surveyor } from '@/app/types';
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ interface CustomerModalProps {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   statuses: Status[];
   leasings: Leasing[];
+  pics: Pic[];
+  surveyors: Surveyor[];
   isSubmitting: boolean;
 }
 
@@ -26,6 +28,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
   handleFileChange,
   statuses,
   leasings,
+  pics,
+  surveyors,
   isSubmitting,
 }) => {
   if (!isOpen) return null;
@@ -50,6 +54,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
             <textarea name="keterangan" placeholder="Keterangan" value={formData.keterangan || ''} onChange={handleInputChange} className="p-2 border rounded md:col-span-2 lg:col-span-3" />
             <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select>
             <select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select>
+            <select name="pic" value={formData.pic?.idpic || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih PIC</option>{pics.map(pic => <option key={pic.idpic} value={pic.idpic}>{pic.namapic}</option>)}</select>
+            <select name="surveyor" value={formData.surveyor?.id || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Surveyor</option>{surveyors.map(s => <option key={s.id} value={s.id}>{s.namasurveyor}</option>)}</select>
             <div><label>Foto KTP</label><input type="file" name="fotoktp" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
             <div><label>Foto BPKB</label><input type="file" name="fotobpkb" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>
             <div><label>Foto STNK</label><input type="file" name="fotostnk" onChange={handleFileChange} className="p-2 border rounded w-full" /></div>

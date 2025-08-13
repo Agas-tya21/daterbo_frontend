@@ -1,4 +1,6 @@
 // agas-tya21/daterbo_frontend/daterbo_frontend-1d9a0105a6fa822db5e581083d639b017c6d96c8/src/app/types/index.ts
+
+
 export interface Role {
     idrole: string;
     namarole: string;
@@ -9,6 +11,22 @@ export interface User {
     namauser: string;
     email: string;
     role?: Role;
+}
+
+export interface Pic {
+    idpic: string;
+    namapic: string;
+    nohp: string;
+    namaleasing: string;
+    asalleasing: string;
+}
+
+export interface Surveyor {
+    id: string;
+    namasurveyor: string;
+    nowa: string;
+    namaleasing: string;
+    asalleasing: string;
 }
 
 export interface Status {
@@ -27,6 +45,8 @@ export interface DataPeminjam {
     user: User;
     status: Status;
     leasing: Leasing;
+    pic?: Pic;
+    surveyor?: Surveyor;
     tglinput: string;
     tglpenerimaan: string;
     tglpencairan: string;

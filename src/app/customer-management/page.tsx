@@ -2,17 +2,16 @@
 
 import { useEffect, useState, FormEvent, ChangeEvent, useMemo, useCallback } from 'react';
 import { API_BASE_URL } from '@/config/api';
-import { DataPeminjam, User, Status, Leasing } from '@/app/types';
+import { DataPeminjam, User, Status, Leasing, Pic, Surveyor } from '@/app/types';
 import { useAuth } from '../context/AuthContext';
 import PrivateRoute from '../components/PrivateRoute';
 import { jwtDecode } from 'jwt-decode';
 import FilterSection from './components/FilterSection';
 import CustomerTable from './components/CustomerTable';
 import CustomerModal from './components/CustomerModal';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx'; // Import library xlsx
 
-// Interface for state file
+// Interface untuk state file
 interface FileState {
   fotoktp?: File;
   fotobpkb?: File;
@@ -24,7 +23,7 @@ interface FileState {
   fotosertifikat?: File;
 }
 
-// Interface for payload token
+// Interface untuk payload token
 interface JwtPayload {
   sub: string; // Ann email pengguna
   role?: string;
@@ -34,7 +33,7 @@ function CustomerManagementContent() {
   const [data, setData] = useState<DataPeminjam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user: authUser, logout } = useAuth(); // Ambil fungsi logout
+  const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -46,14 +45,18 @@ function CustomerManagementContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [leasings, setLeasings] = useState<Leasing[]>([]);
+  const [pics, setPics] = useState<Pic[]>([]);
+  const [surveyors, setSurveyors] = useState<Surveyor[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // State untuk filter
   const [activeStatus, setActiveStatus] = useState<string>('Semua');
   const [selectedLeasing, setSelectedLeasing] = useState<string>('Semua');
   const [selectedUser, setSelectedUser] = useState<string>('Semua');
+  const [selectedPic, setSelectedPic] = useState<string>('Semua');
+  const [selectedSurveyor, setSelectedSurveyor] = useState<string>('Semua');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [searchQuery, setSearchQuery] = useState(''); // State baru untuk search
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Cek apakah user adalah admin atau user yang bisa melihat semua data
   const canViewAllData = authUser?.role === 'R001' || authUser?.role === 'R002';
@@ -67,38 +70,39 @@ function CustomerManagementContent() {
     setLoading(true);
     setError(null);
     try {
-      const responses = await Promise.all([
+      const [peminjamRes, userRes, statusRes, leasingRes, picRes, surveyorRes] = await Promise.all([
         fetch(`${API_BASE_URL}/datapeminjam`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/users`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/status`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/leasing`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/pic`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/surveyor`, { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
 
-      // Cek jika sesi habis
-      for (const response of responses) {
-        if (response.status === 401 || response.status === 403) {
-          logout();
-          return;
-        }
-      }
-
-      if (responses.some(res => !res.ok)) {
+      if (!peminjamRes.ok || !userRes.ok || !statusRes.ok || !leasingRes.ok || !picRes.ok || !surveyorRes.ok) {
         throw new Error('Gagal mengambil data atau sesi Anda telah berakhir.');
       }
-      
-      const [peminjamData, userData, statusData, leasingData] = await Promise.all(responses.map(res => res.json()));
+
+      const peminjamData: DataPeminjam[] = await peminjamRes.json();
+      const userData: User[] = await userRes.json();
+      const statusData: Status[] = await statusRes.json();
+      const leasingData: Leasing[] = await leasingRes.json();
+      const picData: Pic[] = await picRes.json();
+      const surveyorData: Surveyor[] = await surveyorRes.json();
 
       // Urutkan data berdasarkan tglinput (terbaru dulu)
-      peminjamData.sort((a: DataPeminjam, b: DataPeminjam) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
+      peminjamData.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
 
       setData(peminjamData);
       setUsers(userData);
       setStatuses(statusData);
       setLeasings(leasingData);
+      setPics(picData);
+      setSurveyors(surveyorData);
 
       const decodedToken: JwtPayload = jwtDecode(token);
       const userEmail = decodedToken.sub;
-      const loggedInUser = userData.find((user: User) => user.email === userEmail);
+      const loggedInUser = userData.find(user => user.email === userEmail);
       setCurrentUser(loggedInUser || null);
 
     } catch (err: unknown) {
@@ -106,7 +110,7 @@ function CustomerManagementContent() {
     } finally {
       setLoading(false);
     }
-  }, [token, logout]);
+  }, [token]);
 
   useEffect(() => {
     fetchData();
@@ -123,10 +127,9 @@ function CustomerManagementContent() {
 
     // Filter by search query
     if (searchQuery) {
-      const lowercasedQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(item =>
-        (item.nik && item.nik.toLowerCase().includes(lowercasedQuery)) ||
-        (item.namapeminjam && item.namapeminjam.toLowerCase().includes(lowercasedQuery))
+        item.nik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.namapeminjam.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -150,9 +153,19 @@ function CustomerManagementContent() {
     if (canViewAllData && selectedUser !== 'Semua') {
       filtered = filtered.filter(item => item.user?.iduser === selectedUser);
     }
+    
+    // Filter berdasarkan PIC
+    if (selectedPic !== 'Semua') {
+      filtered = filtered.filter(item => item.pic?.idpic === selectedPic);
+    }
+
+    // Filter berdasarkan Surveyor
+    if (selectedSurveyor !== 'Semua') {
+      filtered = filtered.filter(item => item.surveyor?.id === selectedSurveyor);
+    }
 
     return filtered;
-  }, [data, searchQuery, selectedDate, selectedLeasing, selectedUser, canViewAllData, currentUser]);
+  }, [data, searchQuery, selectedDate, selectedLeasing, selectedUser, selectedPic, selectedSurveyor, canViewAllData, currentUser]);
 
   // Logika untuk menghitung jumlah status pada badge berdasarkan data yang sudah difilter
   const statusCounts = useMemo(() => {
@@ -174,19 +187,7 @@ function CustomerManagementContent() {
 
   const openModalForCreate = () => {
     setEditingId(null);
-    const defaultKeterangan = `PIC
-Nama PIC :
-No HP :
-Asal Leasing :
-
-SURVEYOR
-Nama Surveyor :
-No HP :
-Asal Leasing : 
-
-Keterangan :
-`;
-    setFormData({ keterangan: defaultKeterangan });
+    setFormData({});
     setFormFiles({});
     setIsModalOpen(true);
   };
@@ -204,10 +205,9 @@ Keterangan :
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "status" || name === "leasing") {
-        const idKey = name === "status" ? "idstatus" : "idleasing";
-        const nameKey = name === "status" ? "namastatus" : "namaleasing";
-        setFormData(prev => ({ ...prev, [name]: { [idKey]: value, [nameKey]: "" } }));
+    if (name === "status" || name === "leasing" || name === "pic" || name === "surveyor") {
+        const idKey = name === "status" ? "idstatus" : name === "leasing" ? "idleasing" : name === "pic" ? "idpic" : "id";
+        setFormData(prev => ({ ...prev, [name]: { [idKey]: value } }));
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -252,11 +252,6 @@ Keterangan :
         body: dataToSend,
       });
 
-      if (response.status === 401 || response.status === 403) {
-        logout();
-        return;
-      }
-
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || 'Gagal menyimpan data.');
@@ -281,11 +276,6 @@ Keterangan :
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (response.status === 401 || response.status === 403) {
-            logout();
-            return;
-        }
-
         if (!response.ok) {
           throw new Error('Gagal menghapus data.');
         }
@@ -295,49 +285,75 @@ Keterangan :
       }
     }
   };
-  
-  const handleStatusUpdate = async (url: string) => {
+
+  const handleProses = async (id: string) => {
     if (!token) {
-        setError("Aksi tidak diizinkan. Silakan login kembali.");
-        return;
+      setError("Aksi tidak diizinkan. Silakan login kembali.");
+      return;
     }
+
     try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` },
+      const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/proses`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Gagal memproses data.');
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+    }
+  };
+
+  const handleBatal = async (id: string) => {
+    if (!token) {
+      setError("Aksi tidak diizinkan. Silakan login kembali.");
+      return;
+    }
+
+    if (window.confirm("Apakah Anda yakin ingin membatalkan data ini?")) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/batal`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (response.status === 401 || response.status === 403) {
-            logout();
-            return;
-        }
-
-        if (!response.ok) throw new Error('Gagal memperbarui status data.');
+        if (!response.ok) throw new Error('Gagal membatalkan data.');
         fetchData();
-    } catch (err) {
+      } catch (err) {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      }
     }
   };
-  
-  const handleProses = (id: string) => handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/proses`);
-  
-  const handleCair = (id: string) => {
-      if (window.confirm("Apakah Anda yakin ingin mengubah status menjadi CAIR?")) {
-          handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/cair`);
-      }
-  };
-  
-  const handleBatal = (id: string) => {
-      if (window.confirm("Apakah Anda yakin ingin membatalkan data ini?")) {
-          handleStatusUpdate(`${API_BASE_URL}/datapeminjam/${id}/batal`);
-      }
-  };
-  
-  const handleExport = () => {
-    const fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
-    const fileExtension = '.xlsx';
 
-    const formattedData = filteredData.map(item => ({
+  const handleCair = async (id: string) => {
+    if (!token) {
+      setError("Aksi tidak diizinkan. Silakan login kembali.");
+      return;
+    }
+
+    if (window.confirm("Apakah Anda yakin ingin mengubah status menjadi CAIR?")) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/cair`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal mengubah status menjadi cair.');
+        }
+        
+        fetchData(); // Refresh data setelah berhasil
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      }
+    }
+  };
+
+  const handleExport = () => {
+    const worksheet = XLSX.utils.json_to_sheet(filteredData.map(item => ({
       'NIK': item.nik,
       'Nama Peminjam': item.namapeminjam,
       'User': item.user?.namauser,
@@ -347,15 +363,16 @@ Keterangan :
       'Kota': item.kota,
       'Status': item.status?.namastatus,
       'Leasing': item.leasing?.namaleasing,
-      'Tanggal Input': new Date(item.tglinput).toLocaleDateString(),
+      'Tgl Input': new Date(item.tglinput).toLocaleDateString(),
       'Keterangan': item.keterangan,
-    }));
-  
-    const ws = XLSX.utils.json_to_sheet(formattedData);
-    const wb = { Sheets: { 'data': ws }, SheetNames: ['data'] };
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], {type: fileType});
-    saveAs(data, 'filtered_data' + fileExtension);
+      'PIC': item.pic?.namapic,
+      'No. HP PIC': item.pic?.nohp,
+      'Surveyor': item.surveyor?.namasurveyor,
+      'No. HP Surveyor': item.surveyor?.nowa,
+    })));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Peminjam");
+    XLSX.writeFile(workbook, "DataPeminjam.xlsx");
   };
 
 
@@ -368,14 +385,10 @@ Keterangan :
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Customer Management</h1>
           <div>
-            <button 
-                onClick={handleExport} 
-                className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 mr-2">
+            <button onClick={handleExport} className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 mr-2">
               Export to Excel
             </button>
-            <button 
-                onClick={openModalForCreate} 
-                className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
+            <button onClick={openModalForCreate} className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">
               Tambah Data
             </button>
           </div>
@@ -392,6 +405,8 @@ Keterangan :
         handleFileChange={handleFileChange}
         statuses={statuses}
         leasings={leasings}
+        pics={pics}
+        surveyors={surveyors}
         isSubmitting={isSubmitting}
       />
 
@@ -409,6 +424,10 @@ Keterangan :
         setSelectedLeasing={setSelectedLeasing}
         users={users}
         setSelectedUser={setSelectedUser}
+        pics={pics}
+        setSelectedPic={setSelectedPic}
+        surveyors={surveyors}
+        setSelectedSurveyor={setSelectedSurveyor}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />

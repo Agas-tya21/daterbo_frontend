@@ -1,5 +1,3 @@
-// agas-tya21/daterbo_frontend/daterbo_frontend-35019fc170489cc0f5acf961f858bbc07ede527b/src/app/components/Navbar.tsx
-
 'use client';
 
 import Link from 'next/link';
@@ -10,8 +8,9 @@ const Navbar = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const { token, user, logout } = useAuth();
 
-  // Cek apakah pengguna adalah admin (R001)
   const isAdmin = user?.role === 'R001';
+  // Kondisi baru untuk menampilkan menu PIC dan Surveyor
+  const canManagePicAndSurveyor = user?.role === 'R001' || user?.role === 'R002';
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
@@ -60,7 +59,6 @@ const Navbar = () => {
                 >
                   Customer Management
                 </Link>
-                {/* Tampilkan menu ini hanya jika isAdmin bernilai true */}
                 {isAdmin && (
                   <>
                     <Link
@@ -74,6 +72,22 @@ const Navbar = () => {
                       className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
                     >
                       Role Management
+                    </Link>
+                  </>
+                )}
+                {canManagePicAndSurveyor && (
+                  <>
+                    <Link
+                      href="/pic-management"
+                      className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      PIC Management
+                    </Link>
+                    <Link
+                      href="/surveyor-management"
+                      className="hover:bg-red-700 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Surveyor Management
                     </Link>
                   </>
                 )}
@@ -115,7 +129,6 @@ const Navbar = () => {
                     <Link href="/customer-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
                         Customer Management
                     </Link>
-                    {/* Tampilkan menu ini hanya jika isAdmin bernilai true */}
                     {isAdmin && (
                       <>
                         <Link href="/user-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
@@ -123,6 +136,16 @@ const Navbar = () => {
                         </Link>
                         <Link href="/role-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
                             Role Management
+                        </Link>
+                      </>
+                    )}
+                    {canManagePicAndSurveyor && (
+                      <>
+                        <Link href="/pic-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
+                            PIC Management
+                        </Link>
+                        <Link href="/surveyor-management" onClick={closeSidebar} className="hover:bg-red-700 p-3 rounded-lg">
+                            Surveyor Management
                         </Link>
                       </>
                     )}
