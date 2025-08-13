@@ -11,7 +11,7 @@ function UserManagementContent() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, logout } = useAuth(); // Ambil fungsi logout
+  const { token } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [formData, setFormData] = useState<Partial<User>>({});
@@ -24,14 +24,13 @@ function UserManagementContent() {
     setError(null);
     try {
       const [userResponse, roleResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/users`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/roles`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/users`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }),
+        fetch(`${API_BASE_URL}/roles`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }),
       ]);
-
-      if (userResponse.status === 401 || userResponse.status === 403 || roleResponse.status === 401 || roleResponse.status === 403) {
-        logout();
-        return;
-      }
 
       if (!userResponse.ok || !roleResponse.ok) {
         throw new Error('Gagal mengambil data.');
@@ -45,7 +44,7 @@ function UserManagementContent() {
     } finally {
       setLoading(false);
     }
-  }, [token, logout]);
+  }, [token]);
 
   useEffect(() => {
     fetchData();
@@ -92,18 +91,13 @@ function UserManagementContent() {
         body: JSON.stringify(formData),
       });
 
-      if (response.status === 401 || response.status === 403) {
-        logout();
-        return;
-      }
-
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || 'Gagal menyimpan data pengguna.');
       }
 
       setIsModalOpen(false);
-      fetchData();
+      fetchData(); // Refresh data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
@@ -119,11 +113,6 @@ function UserManagementContent() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (response.status === 401 || response.status === 403) {
-          logout();
-          return;
-        }
-
         if (!response.ok) throw new Error('Gagal menghapus pengguna.');
         fetchData();
       } catch (err) {
@@ -136,7 +125,6 @@ function UserManagementContent() {
   if (error) return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
 
   return (
-    // ... JSX tetap sama
     <div className="container mx-auto p-4">
       <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
@@ -159,6 +147,10 @@ function UserManagementContent() {
               <div>
                 <label>Email</label>
                 <input type="email" name="email" placeholder="Email" value={formData.email || ''} onChange={handleInputChange} className="p-2 border rounded w-full" required />
+              </div>
+              <div>
+                <label>No. HP</label>
+                <input name="nohp" placeholder="No. HP" value={formData.nohp || ''} onChange={handleInputChange} className="p-2 border rounded w-full" />
               </div>
               <div>
                 <label>Password</label>
@@ -189,6 +181,7 @@ function UserManagementContent() {
               <tr>
                 <th className="py-3 px-4 text-left">Nama User</th>
                 <th className="py-3 px-4 text-left">Email</th>
+                <th className="py-3 px-4 text-left">No. HP</th>
                 <th className="py-3 px-4 text-left">Role</th>
                 <th className="py-3 px-4 text-left">Aksi</th>
               </tr>
@@ -199,6 +192,7 @@ function UserManagementContent() {
                   <tr key={user.iduser} className="hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-700">
                     <td className="py-2 px-4">{user.namauser}</td>
                     <td className="py-2 px-4">{user.email}</td>
+                    <td className="py-2 px-4">{user.nohp}</td>
                     <td className="py-2 px-4">{user.role?.namarole || 'N/A'}</td>
                     <td className="py-2 px-4 flex space-x-2">
                         <button onClick={() => openModalForEdit(user)} className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
@@ -212,7 +206,7 @@ function UserManagementContent() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-4 px-4 text-center">Tidak ada data pengguna.</td>
+                  <td colSpan={5} className="py-4 px-4 text-center">Tidak ada data pengguna.</td>
                 </tr>
               )}
             </tbody>

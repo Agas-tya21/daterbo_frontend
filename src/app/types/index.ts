@@ -10,6 +10,7 @@ export interface User {
     iduser: string;
     namauser: string;
     email: string;
+    nohp: string;
     role?: Role;
 }
 
@@ -66,4 +67,5 @@ export interface DataPeminjam {
     fotorekeninglistrik: string;
     fotobukunikah: string;
     fotosertifikat: string;
+    fotoktppenjamin: string;
 }

@@ -1,5 +1,3 @@
-// agas-tya21/daterbo_frontend/daterbo_frontend-35019fc170489cc0f5acf961f858bbc07ede527b/src/app/context/AuthContext.tsx
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -7,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/config/api';
 import { jwtDecode } from 'jwt-decode';
 
-// Definisikan interface untuk payload token yang kita harapkan
 interface JwtPayload {
-  sub: string; // sub (subject) adalah email pengguna
-  role?: string; // role adalah klaim kustom kita
+  sub: string;
+  role?: string;
+  nohp?: string; // Menambahkan nohp ke payload
 }
 
 interface AuthUser {
   email: string;
   role: string | null;
+  nohp: string | null; // Menambahkan nohp ke user object
 }
 
 interface AuthContextType {
@@ -38,7 +37,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (jwtToken) {
       try {
         const decoded: JwtPayload = jwtDecode(jwtToken);
-        setUser({ email: decoded.sub, role: decoded.role || null });
+        setUser({ 
+          email: decoded.sub, 
+          role: decoded.role || null,
+          nohp: decoded.nohp || null 
+        });
         setToken(jwtToken);
       } catch (error) {
         console.error("Token tidak valid:", error);

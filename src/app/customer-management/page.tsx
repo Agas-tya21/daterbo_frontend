@@ -9,7 +9,7 @@ import { jwtDecode } from 'jwt-decode';
 import FilterSection from './components/FilterSection';
 import CustomerTable from './components/CustomerTable';
 import CustomerModal from './components/CustomerModal';
-import * as XLSX from 'xlsx'; // Import library xlsx
+import * as XLSX from 'xlsx';
 
 // Interface untuk state file
 interface FileState {
@@ -33,13 +33,14 @@ function CustomerManagementContent() {
   const [data, setData] = useState<DataPeminjam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user: authUser } = useAuth(); // Ambil user dari AuthContext
+  const { token, user: authUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // State untuk data baru atau data yang sedang diedit
   const [formData, setFormData] = useState<Partial<DataPeminjam>>({});
   const [formFiles, setFormFiles] = useState<FileState>({});
+  const [filePreviews, setFilePreviews] = useState<{ [key: string]: string }>({});
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [users, setUsers] = useState<User[]>([]);
@@ -58,7 +59,6 @@ function CustomerManagementContent() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Cek apakah user adalah admin atau user yang bisa melihat semua data
   const canViewAllData = authUser?.role === 'R001' || authUser?.role === 'R002';
   const isAdmin = authUser?.role === 'R001';
 
@@ -90,7 +90,6 @@ function CustomerManagementContent() {
       const picData: Pic[] = await picRes.json();
       const surveyorData: Surveyor[] = await surveyorRes.json();
 
-      // Urutkan data berdasarkan tglinput (terbaru dulu)
       peminjamData.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
 
       setData(peminjamData);
@@ -117,49 +116,41 @@ function CustomerManagementContent() {
   }, [fetchData]);
 
   const datesWithData = useMemo(() => {
-    // Menggunakan Set untuk performa yang lebih baik
     return new Set(data.map(item => new Date(item.tglinput).toDateString()));
   }, [data]);
 
-  // Logika untuk data yang telah difilter (untuk badge dan tabel)
+  // Logika untuk data yang telah difilter
   const baseFilteredData = useMemo(() => {
     let filtered = [...data];
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(item =>
-        item.nik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.namapeminjam.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.nik && item.nik.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.namapeminjam && item.namapeminjam.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
-    // Filter by date
     if (selectedDate) {
       const dateString = selectedDate.toDateString();
       filtered = filtered.filter(item => new Date(item.tglinput).toDateString() === dateString);
     }
 
-    // Jika bukan admin atau user (R002), filter berdasarkan pengguna yang login
     if (!canViewAllData && currentUser) {
         filtered = filtered.filter(item => item.user?.iduser === currentUser.iduser);
     }
 
-    // Filter berdasarkan leasing
     if (selectedLeasing !== 'Semua') {
       filtered = filtered.filter(item => item.leasing?.idleasing === selectedLeasing);
     }
 
-    // Filter berdasarkan user (hanya untuk admin dan user R002)
     if (canViewAllData && selectedUser !== 'Semua') {
       filtered = filtered.filter(item => item.user?.iduser === selectedUser);
     }
     
-    // Filter berdasarkan PIC
     if (selectedPic !== 'Semua') {
       filtered = filtered.filter(item => item.pic?.idpic === selectedPic);
     }
 
-    // Filter berdasarkan Surveyor
     if (selectedSurveyor !== 'Semua') {
       filtered = filtered.filter(item => item.surveyor?.id === selectedSurveyor);
     }
@@ -167,7 +158,6 @@ function CustomerManagementContent() {
     return filtered;
   }, [data, searchQuery, selectedDate, selectedLeasing, selectedUser, selectedPic, selectedSurveyor, canViewAllData, currentUser]);
 
-  // Logika untuk menghitung jumlah status pada badge berdasarkan data yang sudah difilter
   const statusCounts = useMemo(() => {
     const counts: { [key: string]: number } = {};
     statuses.forEach(status => {
@@ -176,7 +166,6 @@ function CustomerManagementContent() {
     return counts;
   }, [baseFilteredData, statuses]);
 
-  // Logika untuk memfilter data akhir yang ditampilkan di tabel
   const filteredData = useMemo(() => {
     if (activeStatus === 'Semua') {
       return baseFilteredData;
@@ -189,17 +178,27 @@ function CustomerManagementContent() {
     setEditingId(null);
     setFormData({});
     setFormFiles({});
+    setFilePreviews({});
     setIsModalOpen(true);
   };
 
   const openModalForEdit = (peminjam: DataPeminjam) => {
     setEditingId(peminjam.iddatapeminjam);
-    setFormData({
-        ...peminjam,
-        status: { idstatus: peminjam.status?.idstatus, namastatus: ''},
-        leasing: { idleasing: peminjam.leasing?.idleasing, namaleasing: ''},
-    });
+    setFormData(peminjam);
     setFormFiles({});
+    
+    const previews: { [key: string]: string } = {};
+    if (peminjam.fotoktp) previews.fotoktp = peminjam.fotoktp;
+    if (peminjam.fotobpkb) previews.fotobpkb = peminjam.fotobpkb;
+    if (peminjam.fotostnk) previews.fotostnk = peminjam.fotostnk;
+    if (peminjam.fotokk) previews.fotokk = peminjam.fotokk;
+    if (peminjam.fotorekeningkoran) previews.fotorekeningkoran = peminjam.fotorekeningkoran;
+    if (peminjam.fotorekeninglistrik) previews.fotorekeninglistrik = peminjam.fotorekeninglistrik;
+    if (peminjam.fotobukunikah) previews.fotobukunikah = peminjam.fotobukunikah;
+    if (peminjam.fotosertifikat) previews.fotosertifikat = peminjam.fotosertifikat;
+    if (peminjam.fotoktppenjamin) previews.fotoktppenjamin = peminjam.fotoktppenjamin;
+    setFilePreviews(previews);
+
     setIsModalOpen(true);
   };
 
@@ -216,7 +215,9 @@ function CustomerManagementContent() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
-      setFormFiles(prev => ({ ...prev, [name]: files[0] }));
+      const file = files[0];
+      setFormFiles(prev => ({ ...prev, [name]: file }));
+      setFilePreviews(prev => ({ ...prev, [name]: URL.createObjectURL(file) }));
     }
   };
 
@@ -229,7 +230,7 @@ function CustomerManagementContent() {
     
     const finalData = { ...formData };
     if (!editingId && currentUser) {
-      finalData.user = { iduser: currentUser.iduser, namauser: '', email: '' };
+      finalData.user = currentUser; // <-- PERBAIKAN DI SINI
     } else {
       delete finalData.user;
     }
@@ -258,7 +259,7 @@ function CustomerManagementContent() {
       }
 
       setIsModalOpen(false);
-      fetchData(); // Refresh data
+      fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
@@ -279,7 +280,7 @@ function CustomerManagementContent() {
         if (!response.ok) {
           throw new Error('Gagal menghapus data.');
         }
-        fetchData(); // Refresh data
+        fetchData();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       }
@@ -345,7 +346,7 @@ function CustomerManagementContent() {
           throw new Error('Gagal mengubah status menjadi cair.');
         }
         
-        fetchData(); // Refresh data setelah berhasil
+        fetchData();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       }
@@ -403,6 +404,7 @@ function CustomerManagementContent() {
         formData={formData}
         handleInputChange={handleInputChange}
         handleFileChange={handleFileChange}
+        filePreviews={filePreviews}
         statuses={statuses}
         leasings={leasings}
         pics={pics}
