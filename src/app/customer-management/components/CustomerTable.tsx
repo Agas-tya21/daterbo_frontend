@@ -52,6 +52,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">Status</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">Leasing</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">Tgl Input</th>
+              <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">Tanggal Update</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider min-w-[200px]">Keterangan</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">PIC</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">No. HP PIC</th>
@@ -84,6 +85,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                   <td className="py-2 px-4 text-xs">{item.status?.namastatus}</td>
                   <td className="py-2 px-4 text-xs">{item.leasing?.namaleasing}</td>
                   <td className="py-2 px-4 text-xs">{new Date(item.tglinput).toLocaleDateString()}</td>
+                  <td className="py-2 px-4 text-xs">{item.tglpenerimaan ? new Date(item.tglpenerimaan).toLocaleDateString() : '-'}</td>
                   <td className="py-2 px-4 text-xs">
                     {item.keterangan && (
                       <div>
@@ -154,7 +156,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
               ))
             ) : (
               <tr>
-                <td colSpan={17} className="py-4 px-4 text-center text-sm">Tidak ada data untuk ditampilkan.</td>
+                <td colSpan={18} className="py-4 px-4 text-center text-sm">Tidak ada data untuk ditampilkan.</td>
               </tr>
             )}
           </tbody>

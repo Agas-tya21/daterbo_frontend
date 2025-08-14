@@ -17,6 +17,7 @@ interface CustomerModalProps {
   pics: Pic[];
   surveyors: Surveyor[];
   isSubmitting: boolean;
+  isAdmin: boolean; // <-- TAMBAHKAN PROPERTI INI
 }
 
 const CustomerModal: React.FC<CustomerModalProps> = ({
@@ -33,6 +34,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
   pics,
   surveyors,
   isSubmitting,
+  isAdmin, // <-- TERIMA PROPERTI INI
 }) => {
   if (!isOpen) return null;
 
@@ -86,7 +88,19 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-            <div><label className="text-sm">Status</label><select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Status</option>{statuses.map(status => <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>)}</select></div>
+            <div>
+              <label className="text-sm">Status</label>
+              <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full">
+                <option value="">Pilih Status</option>
+                {/* MODIFIKASI DIMULAI DI SINI */}
+                {statuses
+                  .filter(status => isAdmin || (status.namastatus !== 'BATAL' && status.namastatus !== 'PROSES PENCARIAN' && status.namastatus !== 'CAIR'))
+                  .map(status => (
+                    <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>
+                ))}
+                {/* MODIFIKASI SELESAI DI SINI */}
+              </select>
+            </div>
             <div><label className="text-sm">Leasing</label><select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select></div>
             <div><label className="text-sm">PIC</label><select name="pic" value={formData.pic?.idpic || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih PIC</option>{pics.map(pic => <option key={pic.idpic} value={pic.idpic}>{`${pic.namapic} - ${pic.namaleasing} (${pic.asalleasing})`}</option>)}</select></div>
             <div><label className="text-sm">Surveyor</label><select name="surveyor" value={formData.surveyor?.id || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Surveyor</option>{surveyors.map(s => <option key={s.id} value={s.id}>{`${s.namasurveyor} - ${s.namaleasing} (${s.asalleasing})`}</option>)}</select></div>

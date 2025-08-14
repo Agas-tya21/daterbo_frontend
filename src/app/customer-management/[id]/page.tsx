@@ -17,8 +17,6 @@ function CustomerDetailPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  const loggedInUserNohp = authUser?.nohp;
-
   useEffect(() => {
     if (!id || !token) return;
 
@@ -51,37 +49,62 @@ function CustomerDetailPageContent() {
 
     const doc = new jsPDF();
     const imageUrls = [
-      { label: 'Foto KTP', url: customer.fotoktp },
-      { label: 'Foto BPKB', url: customer.fotobpkb },
-      { label: 'Foto STNK', url: customer.fotostnk },
-      { label: 'Foto KK', url: customer.fotokk },
-      { label: 'Rekening Koran', url: customer.fotorekeningkoran },
-      { label: 'Rekening Listrik', url: customer.fotorekeninglistrik },
-      { label: 'Buku Nikah', url: customer.fotobukunikah },
-      { label: 'Sertifikat', url: customer.fotosertifikat },
-      { label: 'KTP Penjamin', url: customer.fotoktppenjamin },
+        { label: 'Foto KTP', url: customer.fotoktp },
+        { label: 'Foto BPKB', url: customer.fotobpkb },
+        { label: 'Foto STNK', url: customer.fotostnk },
+        { label: 'Foto KK', url: customer.fotokk },
+        { label: 'Rekening Koran', url: customer.fotorekeningkoran },
+        { label: 'Rekening Listrik', url: customer.fotorekeninglistrik },
+        { label: 'Buku Nikah', url: customer.fotobukunikah },
+        { label: 'Sertifikat', url: customer.fotosertifikat },
+        { label: 'KTP Penjamin', url: customer.fotoktppenjamin },
     ].filter(item => item.url);
 
     for (let i = 0; i < imageUrls.length; i++) {
-      const { label, url } = imageUrls[i];
-      try {
-        const response = await fetch(url!, { headers: { 'Authorization': `Bearer ${token}` } });
-        const blob = await response.blob();
-        const reader = new FileReader();
-        await new Promise<void>(resolve => {
-          reader.onload = (e) => {
+        const { label, url } = imageUrls[i];
+        try {
+            const response = await fetch(url!, { headers: { 'Authorization': `Bearer ${token}` } });
+            const blob = await response.blob();
+            const reader = new FileReader();
+
+            await new Promise<void>((resolve, reject) => {
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        if (i > 0) doc.addPage();
+                        doc.text(label, 10, 10);
+                        
+                        const pageWidth = doc.internal.pageSize.getWidth();
+                        const pageHeight = doc.internal.pageSize.getHeight();
+                        const margin = 10;
+                        const availableWidth = pageWidth - (margin * 2);
+                        const availableHeight = pageHeight - 30; // space for title and margins
+                        
+                        const aspectRatio = img.width / img.height;
+                        let imgWidth = availableWidth;
+                        let imgHeight = imgWidth / aspectRatio;
+
+                        if (imgHeight > availableHeight) {
+                            imgHeight = availableHeight;
+                            imgWidth = imgHeight * aspectRatio;
+                        }
+
+                        const x = (pageWidth - imgWidth) / 2;
+                        
+                        doc.addImage(e.target!.result as string, 'JPEG', x, 20, imgWidth, imgHeight);
+                        resolve();
+                    };
+                    img.onerror = reject;
+                    img.src = e.target!.result as string;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error(`Gagal memuat gambar ${label}:`, error);
             if (i > 0) doc.addPage();
-            doc.text(label, 10, 10);
-            doc.addImage(e.target!.result as string, 'JPEG', 10, 20, 180, 160);
-            resolve();
-          };
-          reader.readAsDataURL(blob);
-        });
-      } catch (error) {
-        console.error(`Gagal memuat gambar ${label}:`, error);
-        if (i > 0) doc.addPage();
-        doc.text(`Gagal memuat gambar: ${label}`, 10, 10);
-      }
+            doc.text(`Gagal memuat gambar: ${label}`, 10, 10);
+        }
     }
 
     const safeFilename = (customer.namapeminjam || "DataPeminjam").replace(/[^a-zA-Z0-9 ]/g, "_");
@@ -89,7 +112,7 @@ function CustomerDetailPageContent() {
 
     setIsExporting(false);
   };
-
+  
   if (loading) return <div className="container mx-auto p-4">Memuat data pelanggan...</div>;
   if (error) return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
   if (!customer) return <div className="container mx-auto p-4">Pelanggan tidak ditemukan.</div>;
