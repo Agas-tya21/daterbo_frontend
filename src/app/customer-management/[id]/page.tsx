@@ -7,7 +7,6 @@ import { DataPeminjam } from '@/app/types';
 import { useAuth } from '@/app/context/AuthContext';
 import PrivateRoute from '@/app/components/PrivateRoute';
 import jsPDF from 'jspdf';
-import ProtectedImage from '@/app/components/ProtectedImage';
 
 function CustomerDetailPageContent() {
   const { id } = useParams();
@@ -105,16 +104,22 @@ function CustomerDetailPageContent() {
   const PhotoPreview = ({ label, url }: { label: string; url?: string | null }) => (
     <div>
       <p className="text-sm font-medium mb-1">{label}</p>
-      <a href={url || '#'} target="_blank" rel="noopener noreferrer" className={`block w-full aspect-video rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700 shadow-sm ${!url && 'pointer-events-none'}`}>
-        <ProtectedImage src={url} alt={label} />
-      </a>
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700 shadow-sm">
+          <img src={url} alt={label} className="object-cover w-full h-full" />
+        </a>
+      ) : (
+        <div className="w-full aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-500 shadow-sm">
+          Tidak Ada Gambar
+        </div>
+      )}
     </div>
   );
 
   return (
     <div className="container mx-auto p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
-        <h1 className="text-xl font-bold">Edit Data Peminjam</h1>
+        <h1 className="text-xl font-bold">Detail Data Peminjam</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetailItem label="NIK" value={customer.nik} />
