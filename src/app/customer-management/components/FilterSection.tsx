@@ -2,6 +2,7 @@
 
 import DatePicker from 'react-datepicker';
 import { Status, Leasing, User, DataPeminjam, Pic, Surveyor } from '@/app/types';
+import { useMemo } from 'react';
 
 interface FilterSectionProps {
   activeStatus: string;
@@ -46,6 +47,19 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   searchQuery,
   setSearchQuery,
 }) => {
+  const sortedStatuses = useMemo(() => {
+    const s001 = statuses.find(s => s.idstatus === 'S001');
+    const s005 = statuses.find(s => s.idstatus === 'S005');
+    const others = statuses.filter(s => s.idstatus !== 'S001' && s.idstatus !== 'S005');
+    
+    const result = [];
+    if (s001) result.push(s001);
+    if (s005) result.push(s005);
+    result.push(...others);
+    
+    return result;
+  }, [statuses]);
+
   return (
     <div className='mb-4'>
       <div className="bg-red-600 rounded-full p-1 pt-3">
@@ -54,7 +68,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             Semua
             <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">{baseFilteredData.length}</span>
           </button>
-          {statuses.map(status => (
+          {sortedStatuses.map(status => (
             <button key={status.idstatus} onClick={() => setActiveStatus(status.namastatus)} className={`relative inline-flex items-center flex-shrink-0 px-4 py-2 text-xs font-bold rounded-full transition-colors duration-300 ${activeStatus === status.namastatus ? 'bg-white text-red-600' : 'text-white hover:bg-red-700'}`}>
               {status.namastatus}
               <span className="ml-2 -mt-5 bg-yellow-400 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">

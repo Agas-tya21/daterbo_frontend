@@ -309,6 +309,25 @@ function CustomerManagementContent() {
     }
   };
 
+  const handleDataLengkap = async (id: string) => {
+    if (!token) {
+      setError("Aksi tidak diizinkan. Silakan login kembali.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/datapeminjam/${id}/datalengkap`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Gagal mengubah status menjadi data lengkap.');
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+    }
+  };
+  
   const handleProses = async (id: string) => {
     if (!token) {
       setError("Aksi tidak diizinkan. Silakan login kembali.");
@@ -463,6 +482,7 @@ function CustomerManagementContent() {
       <CustomerTable
         filteredData={filteredData}
         openModalForEdit={openModalForEdit}
+        handleDataLengkap={handleDataLengkap}
         handleProses={handleProses}
         handleCair={handleCair}
         handleBatal={handleBatal}

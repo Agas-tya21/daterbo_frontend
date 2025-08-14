@@ -8,6 +8,7 @@ import ActionMenu from './ActionMenu';
 interface CustomerTableProps {
   filteredData: DataPeminjam[];
   openModalForEdit: (peminjam: DataPeminjam) => void;
+  handleDataLengkap: (id: string) => void;
   handleProses: (id: string) => void;
   handleCair: (id: string) => void;
   handleBatal: (id: string) => void;
@@ -18,6 +19,7 @@ interface CustomerTableProps {
 const CustomerTable: React.FC<CustomerTableProps> = ({
   filteredData,
   openModalForEdit,
+  handleDataLengkap,
   handleProses,
   handleCair,
   handleBatal,
@@ -145,6 +147,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                     <ActionMenu
                       item={item}
                       openModalForEdit={openModalForEdit}
+                      handleDataLengkap={handleDataLengkap}
                       handleProses={handleProses}
                       handleCair={handleCair}
                       handleBatal={handleBatal}
