@@ -229,6 +229,10 @@ function CustomerManagementContent() {
     const dataToSend = new FormData();
     
     const finalData = { ...formData };
+    if (editingId) {
+      finalData.tglpenerimaan = new Date().toISOString().split('T')[0];
+    }
+    
     if (!editingId && currentUser) {
       finalData.user = currentUser; // <-- PERBAIKAN DI SINI
     } else {

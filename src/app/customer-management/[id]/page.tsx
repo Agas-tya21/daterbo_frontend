@@ -131,7 +131,7 @@ function CustomerDetailPageContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <DetailItem label="Tanggal Input" value={customer.tglinput ? new Date(customer.tglinput).toLocaleDateString() : '-'} />
-          <DetailItem label="Tanggal Penerimaan" value={customer.tglpenerimaan ? new Date(customer.tglpenerimaan).toLocaleDateString() : '-'} />
+          <DetailItem label="Tanggal Update Terakhir" value={customer.tglpenerimaan ? new Date(customer.tglpenerimaan).toLocaleDateString() : '-'} />
           <DetailItem label="Tanggal Pencairan" value={customer.tglpencairan ? new Date(customer.tglpencairan).toLocaleDateString() : '-'} />
         </div>
 

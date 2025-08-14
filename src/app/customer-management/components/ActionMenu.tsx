@@ -37,7 +37,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
             <button onClick={() => { openModalForEdit(item); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">Update</button>
             {item.status?.idstatus === 'S001' && (<button onClick={() => { handleProses(item.iddatapeminjam); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">Proses</button>)}
             {item.status?.idstatus === 'S002' && (<button onClick={() => { handleCair(item.iddatapeminjam); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">Cair</button>)}
-            {(item.status?.idstatus === 'S001' || item.status?.idstatus === 'S002') && (<button onClick={() => { handleBatal(item.iddatapeminjam); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">Batal</button>)}
+            {isAdmin && (item.status?.idstatus === 'S001' || item.status?.idstatus === 'S002') && (<button onClick={() => { handleBatal(item.iddatapeminjam); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">Batal</button>)}
             {isAdmin && (<button onClick={() => { handleDelete(item.iddatapeminjam); setIsOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600">Delete</button>)}
           </div>
         </div>
