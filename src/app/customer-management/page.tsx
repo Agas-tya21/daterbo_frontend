@@ -90,8 +90,6 @@ function CustomerManagementContent() {
       const picData: Pic[] = await picRes.json();
       const surveyorData: Surveyor[] = await surveyorRes.json();
 
-      peminjamData.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
-
       setData(peminjamData);
       setUsers(userData);
       setStatuses(statusData);
@@ -167,11 +165,31 @@ function CustomerManagementContent() {
   }, [baseFilteredData, statuses]);
 
   const filteredData = useMemo(() => {
+    let dataToFilter;
+
     if (activeStatus === 'Semua') {
-      return baseFilteredData;
+      dataToFilter = [...baseFilteredData];
+    } else {
+      dataToFilter = baseFilteredData.filter(item => item.status?.namastatus === activeStatus);
     }
-    return baseFilteredData.filter(item => item.status?.namastatus === activeStatus);
-  }, [baseFilteredData, activeStatus]);
+
+    // Temukan nama status yang sesuai dengan ID 'S003'
+    const prosesStatusName = statuses.find(s => s.idstatus === 'S003')?.namastatus;
+
+    if (activeStatus === prosesStatusName) {
+      // Urutkan berdasarkan tglpenerimaan (terlama ke terbaru)
+      dataToFilter.sort((a, b) => {
+        if (!a.tglpenerimaan) return 1;
+        if (!b.tglpenerimaan) return -1;
+        return new Date(a.tglpenerimaan).getTime() - new Date(b.tglpenerimaan).getTime();
+      });
+    } else {
+      // Pengurutan default untuk status lainnya (terbaru ke terlama berdasarkan tglinput)
+      dataToFilter.sort((a, b) => new Date(b.tglinput).getTime() - new Date(a.tglinput).getTime());
+    }
+
+    return dataToFilter;
+  }, [baseFilteredData, activeStatus, statuses]);
 
 
   const openModalForCreate = () => {
@@ -234,7 +252,7 @@ function CustomerManagementContent() {
     }
     
     if (!editingId && currentUser) {
-      finalData.user = currentUser; // <-- PERBAIKAN DI SINI
+      finalData.user = currentUser;
     } else {
       delete finalData.user;
     }
@@ -358,26 +376,29 @@ function CustomerManagementContent() {
   };
 
   const handleExport = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredData.map(item => ({
-      'NIK': item.nik,
-      'Nama Peminjam': item.namapeminjam,
-      'User': item.user?.namauser,
-      'No. HP': item.nohp,
-      'Aset': item.aset,
-      'Tahun Aset': item.tahunaset,
-      'Kota': item.kota,
-      'Status': item.status?.namastatus,
-      'Leasing': item.leasing?.namaleasing,
-      'Tgl Input': new Date(item.tglinput).toLocaleDateString(),
-      'Keterangan': item.keterangan,
-      'PIC': item.pic?.namapic,
-      'No. HP PIC': item.pic?.nohp,
-      'Surveyor': item.surveyor?.namasurveyor,
-      'No. HP Surveyor': item.surveyor?.nowa,
-    })));
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Peminjam");
-    XLSX.writeFile(workbook, "DataPeminjam.xlsx");
+    const fileName = prompt("Masukkan nama file untuk ekspor:", "DataPeminjam");
+    if (fileName) {
+      const worksheet = XLSX.utils.json_to_sheet(filteredData.map(item => ({
+        'NIK': item.nik,
+        'Nama Peminjam': item.namapeminjam,
+        'User': item.user?.namauser,
+        'No. HP': item.nohp,
+        'Aset': item.aset,
+        'Tahun Aset': item.tahunaset,
+        'Kota': item.kota,
+        'Status': item.status?.namastatus,
+        'Leasing': item.leasing?.namaleasing,
+        'Tgl Input': new Date(item.tglinput).toLocaleDateString(),
+        'Keterangan': item.keterangan,
+        'PIC': item.pic?.namapic,
+        'No. HP PIC': item.pic?.nohp,
+        'Surveyor': item.surveyor?.namasurveyor,
+        'No. HP Surveyor': item.surveyor?.nowa,
+      })));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data Peminjam");
+      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    }
   };
 
 
@@ -414,6 +435,7 @@ function CustomerManagementContent() {
         pics={pics}
         surveyors={surveyors}
         isSubmitting={isSubmitting}
+        isAdmin={isAdmin}
       />
 
       <FilterSection
