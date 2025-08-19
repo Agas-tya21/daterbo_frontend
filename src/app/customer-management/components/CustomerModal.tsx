@@ -17,7 +17,7 @@ interface CustomerModalProps {
   pics: Pic[];
   surveyors: Surveyor[];
   isSubmitting: boolean;
-  isAdmin: boolean; // <-- TAMBAHKAN PROPERTI INI
+  isAdmin: boolean;
 }
 
 const CustomerModal: React.FC<CustomerModalProps> = ({
@@ -34,25 +34,41 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
   pics,
   surveyors,
   isSubmitting,
-  isAdmin, // <-- TERIMA PROPERTI INI
+  isAdmin,
 }) => {
   if (!isOpen) return null;
 
-  const renderFileInput = (name: keyof DataPeminjam, label: string) => (
-    <div>
-      <label className="text-sm font-medium">{label}</label>
-      <div className="mt-1 border rounded-lg p-2 space-y-2">
-        <div className="h-24 w-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
-          {filePreviews[name] ? (
-            <img src={filePreviews[name]} alt={`${label} preview`} className="h-full w-full object-contain rounded" />
-          ) : (
-            <span className="text-xs text-gray-500">Preview</span>
-          )}
+  const getImageUrl = (filename?: string | null): string | null => {
+    if (!filename) {
+      return null;
+    }
+    // blob URLs for local previews will start with "blob:"
+    if (filename.startsWith('http') || filename.startsWith('blob:')) {
+      return filename;
+    }
+    const UPLOAD_BASE_URL = 'http://db.turboo.web.id:8070/uploads';
+    return `${UPLOAD_BASE_URL}/${filename}`;
+  };
+
+  const renderFileInput = (name: keyof DataPeminjam, label: string) => {
+    const imageUrl = getImageUrl(filePreviews[name]);
+    return (
+        <div>
+        <label className="text-sm font-medium">{label}</label>
+        <div className="mt-1 border rounded-lg p-2 space-y-2">
+            <div className="h-24 w-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
+            {imageUrl ? (
+                <img src={imageUrl} alt={`${label} preview`} className="h-full w-full object-contain rounded" />
+            ) : (
+                <span className="text-xs text-gray-500">Preview</span>
+            )}
+            </div>
+            <input type="file" name={name} onChange={handleFileChange} className="w-full text-xs" />
         </div>
-        <input type="file" name={name} onChange={handleFileChange} className="w-full text-xs" />
-      </div>
-    </div>
-  );
+        </div>
+    );
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -92,13 +108,11 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
               <label className="text-sm">Status</label>
               <select name="status" value={formData.status?.idstatus || ''} onChange={handleInputChange} className="p-2 border rounded w-full">
                 <option value="">Pilih Status</option>
-                {/* MODIFIKASI DIMULAI DI SINI */}
                 {statuses
                   .filter(status => isAdmin || (status.namastatus !== 'BATAL' && status.namastatus !== 'PROSES PENCARIAN' && status.namastatus !== 'CAIR'))
                   .map(status => (
                     <option key={status.idstatus} value={status.idstatus}>{status.namastatus}</option>
                 ))}
-                {/* MODIFIKASI SELESAI DI SINI */}
               </select>
             </div>
             <div><label className="text-sm">Leasing</label><select name="leasing" value={formData.leasing?.idleasing || ''} onChange={handleInputChange} className="p-2 border rounded w-full"><option value="">Pilih Leasing</option>{leasings.map(leasing => <option key={leasing.idleasing} value={leasing.idleasing}>{leasing.namaleasing}</option>)}</select></div>

@@ -17,6 +17,20 @@ function CustomerDetailPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Tambahkan fungsi ini
+  const getImageUrl = (filename?: string | null): string | null => {
+    if (!filename) {
+      return null;
+    }
+    if (filename.startsWith('http')) {
+      return filename;
+    }
+    // Sebaiknya URL ini disimpan di environment variable (.env.local)
+    const UPLOAD_BASE_URL = 'http://db.turboo.web.id:8070/uploads';
+    return `${UPLOAD_BASE_URL}/${filename}`;
+  };
+
+
   useEffect(() => {
     if (!id || !token) return;
 
@@ -49,15 +63,15 @@ function CustomerDetailPageContent() {
 
     const doc = new jsPDF();
     const imageUrls = [
-        { label: 'Foto KTP', url: customer.fotoktp },
-        { label: 'Foto BPKB', url: customer.fotobpkb },
-        { label: 'Foto STNK', url: customer.fotostnk },
-        { label: 'Foto KK', url: customer.fotokk },
-        { label: 'Rekening Koran', url: customer.fotorekeningkoran },
-        { label: 'Rekening Listrik', url: customer.fotorekeninglistrik },
-        { label: 'Buku Nikah', url: customer.fotobukunikah },
-        { label: 'Sertifikat', url: customer.fotosertifikat },
-        { label: 'KTP Penjamin', url: customer.fotoktppenjamin },
+        { label: 'Foto KTP', url: getImageUrl(customer.fotoktp) },
+        { label: 'Foto BPKB', url: getImageUrl(customer.fotobpkb) },
+        { label: 'Foto STNK', url: getImageUrl(customer.fotostnk) },
+        { label: 'Foto KK', url: getImageUrl(customer.fotokk) },
+        { label: 'Rekening Koran', url: getImageUrl(customer.fotorekeningkoran) },
+        { label: 'Rekening Listrik', url: getImageUrl(customer.fotorekeninglistrik) },
+        { label: 'Buku Nikah', url: getImageUrl(customer.fotobukunikah) },
+        { label: 'Sertifikat', url: getImageUrl(customer.fotosertifikat) },
+        { label: 'KTP Penjamin', url: getImageUrl(customer.fotoktppenjamin) },
     ].filter(item => item.url);
 
     for (let i = 0; i < imageUrls.length; i++) {
@@ -124,20 +138,23 @@ function CustomerDetailPageContent() {
     </div>
   );
 
-  const PhotoPreview = ({ label, url }: { label: string; url?: string | null }) => (
-    <div>
-      <p className="text-sm font-medium mb-1">{label}</p>
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700 shadow-sm">
-          <img src={url} alt={label} className="object-cover w-full h-full" />
-        </a>
-      ) : (
-        <div className="w-full aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-500 shadow-sm">
-          Tidak Ada Gambar
+  const PhotoPreview = ({ label, url }: { label: string; url?: string | null }) => {
+    const imageUrl = getImageUrl(url);
+    return (
+        <div>
+        <p className="text-sm font-medium mb-1">{label}</p>
+        {imageUrl ? (
+            <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700 shadow-sm">
+            <img src={imageUrl} alt={label} className="object-cover w-full h-full" />
+            </a>
+        ) : (
+            <div className="w-full aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-500 shadow-sm">
+            Tidak Ada Gambar
+            </div>
+        )}
         </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="container mx-auto p-4">
