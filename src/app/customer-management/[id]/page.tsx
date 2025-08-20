@@ -17,7 +17,6 @@ function CustomerDetailPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Tambahkan fungsi ini
   const getImageUrl = (filename?: string | null): string | null => {
     if (!filename) {
       return null;
@@ -25,7 +24,6 @@ function CustomerDetailPageContent() {
     if (filename.startsWith('http')) {
       return filename;
     }
-    // Sebaiknya URL ini disimpan di environment variable (.env.local)
     const UPLOAD_BASE_URL = 'http://db.turboo.web.id:8070/uploads';
     return `${UPLOAD_BASE_URL}/${filename}`;
   };
@@ -167,6 +165,11 @@ function CustomerDetailPageContent() {
           <DetailItem label="User Input" value={customer.user?.namauser} />
           <DetailItem label="Aset" value={`${customer.aset} / ${customer.tahunaset}`} />
           <DetailItem label="Status" value={customer.status?.namastatus} />
+          {/* MODIFICATION START: Added Alamat, Kota, Kecamatan */}
+          <DetailItem label="Alamat" value={customer.alamat} />
+          <DetailItem label="Kota" value={customer.kota} />
+          <DetailItem label="Kecamatan" value={customer.kecamatan} />
+          {/* MODIFICATION END */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

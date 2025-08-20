@@ -39,9 +39,11 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
 
   return (
     <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-[20px] shadow-md p-4 overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* MODIFICATION START: Added max-h-[70vh] and overflow-y-auto */}
+      <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+      {/* MODIFICATION END */}
         <table className="min-w-full text-sm">
-          <thead className="bg-[#fe0000] text-white">
+          <thead className="bg-[#fe0000] text-white sticky top-0 z-10">
             <tr>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">No.</th>
               <th className="py-3 px-4 text-left text-xs font-medium uppercase tracking-wider">NIK</th>
